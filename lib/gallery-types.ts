@@ -1,6 +1,7 @@
 export type R2Image = {
 	key: string;
-	url: string;
+	thumbUrl: string;
+	fullUrl: string;
 	alt: string;
 };
 

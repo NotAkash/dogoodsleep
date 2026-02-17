@@ -16,10 +16,13 @@ function requireEnv(...keys: string[]): string {
 const accountId = requireEnv("CLOUDFLARE_ACCOUNT_ID");
 const accessKeyId = requireEnv("CLOUDFLARE_ACCESS_KEY_ID");
 const secretAccessKey = requireEnv("CLOUDFLARE_SECRET_ACCESS_KEY");
-const bucketName = requireEnv("CLOUDFLARE_R2_BUCKET_NAME");
-const publicBaseUrl = requireEnv(
-  "CLOUDFLARE_PUBLIC_PRODUCTION_URL",
-  "CLOUDFLARE_PUBCLIC_DEVELOPMENT_URL"
+const bucketNameThumbs = requireEnv("CLOUDFLARE_R2_BUCKET_NAME_THUMBS");
+const publicBaseUrl = requireEnv("CLOUDFLARE_PUBLIC_DEVELOPMENT_URL").replace(
+	/\/+$/,
+	"",
+);
+const publicBaseUrlThumbs = requireEnv(
+	"CLOUDFLARE_PUBLIC_DEVELOPMENT_URL_THUMBS",
 ).replace(/\/+$/, "");
 
 export const r2Client = new S3Client({
@@ -34,7 +37,8 @@ export const r2Client = new S3Client({
 function toImage(key: string): R2Image {
 	return {
 		key,
-		url: `${publicBaseUrl}/${encodeURI(key)}`,
+		thumbUrl: `${publicBaseUrlThumbs}/${encodeURI(key)}`,
+		fullUrl: `${publicBaseUrl}/${encodeURI(key)}`,
 		alt: key.split("/").pop() ?? key,
 	};
 }
@@ -50,15 +54,15 @@ function shuffle<T>(items: T[]): T[] {
 
 export async function getImagesPage(
 	limit = 12,
-	cursor?: string
+	cursor?: string,
 ): Promise<ImagesPage> {
 	const safeLimit = Math.max(1, Math.min(limit, 48));
 	const response = await r2Client.send(
 		new ListObjectsV2Command({
-			Bucket: bucketName,
+			Bucket: bucketNameThumbs,
 			ContinuationToken: cursor,
 			MaxKeys: safeLimit,
-		})
+		}),
 	);
 
 	const images = (response.Contents ?? [])
@@ -69,7 +73,7 @@ export async function getImagesPage(
 	return {
 		images,
 		nextCursor: response.IsTruncated
-			? response.NextContinuationToken ?? null
+			? (response.NextContinuationToken ?? null)
 			: null,
 	};
 }
@@ -82,18 +86,22 @@ export async function getRandomImages(limit = 6): Promise<R2Image[]> {
 	do {
 		const response = await r2Client.send(
 			new ListObjectsV2Command({
-				Bucket: bucketName,
+				Bucket: bucketNameThumbs,
 				ContinuationToken: cursor,
 				MaxKeys: 1000,
-			})
+			}),
 		);
 
 		keys.push(
-			...((response.Contents ?? [])
+			...(response.Contents ?? [])
 				.map((item) => item.Key)
-				.filter((key): key is string => Boolean(key && !key.endsWith("/"))))
+				.filter((key): key is string =>
+					Boolean(key && !key.endsWith("/")),
+				),
 		);
-		cursor = response.IsTruncated ? response.NextContinuationToken : undefined;
+		cursor = response.IsTruncated
+			? response.NextContinuationToken
+			: undefined;
 	} while (cursor);
 
 	return shuffle(keys).slice(0, safeLimit).map(toImage);
