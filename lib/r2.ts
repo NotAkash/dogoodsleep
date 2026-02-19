@@ -35,10 +35,12 @@ export const r2Client = new S3Client({
 });
 
 function toImage(key: string): R2Image {
-	return {
+	console.log("toImage", { key, publicBaseUrl, publicBaseUrlThumbs });
+    const fullKey = key.replace(/\.webp$/, ".jpg");
+    return {
 		key,
 		thumbUrl: `${publicBaseUrlThumbs}/${encodeURI(key)}`,
-		fullUrl: `${publicBaseUrl}/${encodeURI(key)}`,
+		fullUrl: `${publicBaseUrl}/${encodeURI(fullKey)}`,
 		alt: key.split("/").pop() ?? key,
 	};
 }

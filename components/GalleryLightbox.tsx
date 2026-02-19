@@ -30,6 +30,13 @@ export function GalleryLightbox({ images }: GalleryLightboxProps) {
     return (
         <>
             <section className="columns-1 gap-4 sm:columns-2 lg:columns-3">
+                <article className="mb-4 break-inside-avoid rounded-xl border border-white/5 bg-[#0b0b0b] p-6">
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/50">do-good-sleep</p>
+                    <h2 className="mt-3 text-4xl font-semibold leading-tight text-white">Places & Faces</h2>
+                    <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/70">
+                        Quiet frames from streets, landscapes, and people I meet along the way.
+                    </p>
+                </article>
                 {images.map((image) => (
                     <article key={image.key} className="mb-4 break-inside-avoid">
                         <button
@@ -72,11 +79,11 @@ export function GalleryLightbox({ images }: GalleryLightboxProps) {
                             X
                         </button>
 
-            <div className="flex h-full w-full items-center justify-center p-4 md:p-8">
-              <div
-                className="relative h-full w-full max-w-[92vw]"
-                onClick={(event) => event.stopPropagation()}
-              >
+                        <div className="flex h-full w-full items-center justify-center p-4 md:p-8">
+                            <div
+                                className="relative h-full w-full max-w-[92vw]"
+                                onClick={(event) => event.stopPropagation()}
+                            >
                                 <img
                                     src={selectedImage.thumbUrl}
                                     alt=""

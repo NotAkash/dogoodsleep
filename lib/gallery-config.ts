@@ -1,1 +1,0 @@
-export const PLACES_FACES_IMAGE_COUNT = 12;
