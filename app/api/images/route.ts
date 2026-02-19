@@ -3,6 +3,49 @@ import { getImagesPage } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * @swagger
+ * /api/images:
+ *   get:
+ *     description: "Fetches a paginated list of images."
+ *     parameters:
+ *       - name: "limit"
+ *         in: "query"
+ *         description: "The number of images to fetch."
+ *         required: false
+ *         schema:
+ *           type: "integer"
+ *           default: 12
+ *       - name: "cursor"
+ *         in: "query"
+ *         description: "The cursor for pagination."
+ *         required: false
+ *         schema:
+ *           type: "string"
+ *     responses:
+ *       200:
+ *         description: "A paginated list of images."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: "object"
+ *               properties:
+ *                 images:
+ *                   type: "array"
+ *                   items:
+ *                     $ref: "#/components/schemas/R2Image"
+ *                 nextCursor:
+ *                   type: "string"
+ *       500:
+ *         description: "An error occurred."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: "object"
+ *               properties:
+ *                 error:
+ *                   type: "string"
+ */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

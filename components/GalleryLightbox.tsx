@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import type { R2Image } from "@/lib/gallery-types";
+import type { R2Image } from "@/types";
 
 type GalleryLightboxProps = {
     images: R2Image[];

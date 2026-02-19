@@ -1,6 +1,7 @@
 import "server-only";
 import { ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
-import type { ImagesPage, R2Image } from "@/lib/gallery-types";
+import type { ImagesPage, R2Image } from "@/types";
+import { shuffle } from "./utils";
 
 function requireEnv(...keys: string[]): string {
 	for (const key of keys) {
@@ -35,7 +36,6 @@ export const r2Client = new S3Client({
 });
 
 function toImage(key: string): R2Image {
-	console.log("toImage", { key, publicBaseUrl, publicBaseUrlThumbs });
     const fullKey = key.replace(/\.webp$/, ".jpg");
     return {
 		key,
@@ -45,15 +45,12 @@ function toImage(key: string): R2Image {
 	};
 }
 
-function shuffle<T>(items: T[]): T[] {
-	const arr = [...items];
-	for (let i = arr.length - 1; i > 0; i -= 1) {
-		const j = Math.floor(Math.random() * (i + 1));
-		[arr[i], arr[j]] = [arr[j], arr[i]];
-	}
-	return arr;
-}
-
+/**
+ * Fetches a paginated list of images from R2.
+ * @param limit - The number of images to fetch.
+ * @param cursor - The cursor for pagination.
+ * @returns A promise that resolves to an object containing the images and the next cursor.
+ */
 export async function getImagesPage(
 	limit = 12,
 	cursor?: string,
@@ -80,6 +77,11 @@ export async function getImagesPage(
 	};
 }
 
+/**
+ * Fetches a random selection of images from R2.
+ * @param limit - The number of random images to fetch.
+ * @returns A promise that resolves to an array of random images.
+ */
 export async function getRandomImages(limit = 6): Promise<R2Image[]> {
 	const safeLimit = Math.max(1, Math.min(limit, 48));
 	const keys: string[] = [];

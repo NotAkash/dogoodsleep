@@ -1,6 +1,6 @@
 import { getRandomImages } from "@/lib/r2";
 import { GalleryLightbox } from "@/components/GalleryLightbox";
-import { PLACES_FACES_IMAGE_COUNT } from "@/lib/gallery-types";
+import { PLACES_FACES_IMAGE_COUNT } from "@/types";
 
 export const dynamic = "force-dynamic";
 
