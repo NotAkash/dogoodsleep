@@ -1,7 +1,7 @@
 import "server-only";
 import swaggerJsdoc from "swagger-jsdoc";
 
-export const getApiDocs = async () => {
+export const getApiDocs = () => {
   const options = {
     definition: {
       openapi: "3.0.0",
