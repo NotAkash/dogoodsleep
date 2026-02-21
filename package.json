@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "pages:build": "next build && npx @cloudflare/next-on-pages",
+    "dev": "node scripts/generate-swagger.js && next dev",
+    "build": "node scripts/generate-swagger.js && next build",
+    "pages:build": "node scripts/generate-swagger.js && next build && npx @cloudflare/next-on-pages",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate-swagger": "node scripts/generate-swagger.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.995.0",
