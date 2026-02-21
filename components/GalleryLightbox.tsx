@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import type { R2Image } from "@/types";
-
+export const runtime = "edge";
 type GalleryLightboxProps = {
     images: R2Image[];
 };

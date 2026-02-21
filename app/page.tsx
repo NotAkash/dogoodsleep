@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 export default function HomePage() {
     return (
         <main className="grid min-h-[calc(100vh-84px)] place-items-center bg-[#0a0a0a] px-6 text-center">
