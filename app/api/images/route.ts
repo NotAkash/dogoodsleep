@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getImagesPage } from "@/lib/r2";
 
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 /**

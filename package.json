@@ -10,11 +10,11 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.758.0",
+    "@aws-sdk/client-s3": "^3.995.0",
     "framer-motion": "^12.4.2",
-    "next": "^16.1.6",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "next": "15.1.7",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
     "server-only": "^0.0.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-react": "^5.31.1"

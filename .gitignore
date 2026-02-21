@@ -1,9 +1,42 @@
-node_modules
-.next
-out
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# Cloudflare / Next-on-Pages build output
+/.vercel/
+/.wrangler/
+
+# production
+/build
+
+# misc
 .DS_Store
+*.pem
+
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-.env*
+
+# local env files
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
