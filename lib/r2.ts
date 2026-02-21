@@ -18,13 +18,24 @@ const accountId = requireEnv("CLOUDFLARE_ACCOUNT_ID");
 const accessKeyId = requireEnv("CLOUDFLARE_ACCESS_KEY_ID");
 const secretAccessKey = requireEnv("CLOUDFLARE_SECRET_ACCESS_KEY");
 const bucketNameThumbs = requireEnv("CLOUDFLARE_R2_BUCKET_NAME_THUMBS");
-const publicBaseUrl = requireEnv("CLOUDFLARE_PUBLIC_DEVELOPMENT_URL").replace(
-	/\/+$/,
-	"",
-);
-const publicBaseUrlThumbs = requireEnv(
-	"CLOUDFLARE_PUBLIC_DEVELOPMENT_URL_THUMBS",
+
+const publicBaseUrl = (
+	process.env.CLOUDFLARE_PUBLIC_PRODUCTION_URL ||
+	process.env.CLOUDFLARE_PUBLIC_DEVELOPMENT_URL ||
+	""
 ).replace(/\/+$/, "");
+
+const publicBaseUrlThumbs = (
+	process.env.CLOUDFLARE_PUBLIC_PRODUCTION_URL_THUMBS ||
+	process.env.CLOUDFLARE_PUBLIC_DEVELOPMENT_URL_THUMBS ||
+	""
+).replace(/\/+$/, "");
+
+if (!publicBaseUrl || !publicBaseUrlThumbs) {
+	throw new Error(
+		"Missing required public R2 URLs. Please set CLOUDFLARE_PUBLIC_PRODUCTION_URL or CLOUDFLARE_PUBLIC_DEVELOPMENT_URL and their thumbs counterparts.",
+	);
+}
 
 export const r2Client = new S3Client({
 	region: "auto",

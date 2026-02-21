@@ -4,7 +4,7 @@ const nextConfig = {
     remotePatterns: (() => {
       const publicUrl =
         process.env.CLOUDFLARE_PUBLIC_PRODUCTION_URL ||
-        process.env.CLOUDFLARE_PUBCLIC_DEVELOPMENT_URL;
+        process.env.CLOUDFLARE_PUBLIC_DEVELOPMENT_URL;
 
       if (!publicUrl) {
         return [];
