@@ -2,7 +2,7 @@ import { getRandomImages } from "@/lib/r2";
 import { GalleryLightbox } from "@/components/GalleryLightbox";
 import { PLACES_FACES_IMAGE_COUNT } from "@/types";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function PlacesFacesPage() {
