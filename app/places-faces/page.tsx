@@ -1,6 +1,8 @@
-import { galleryImages } from "@/data/gallery";
+import { getGalleryImages } from "@/data/remote-gallery";
 
-export default function PlacesFacesPage() {
+export default async function PlacesFacesPage() {
+  const galleryImages = await getGalleryImages();
+
   return (
     <main className="mx-auto w-full max-w-6xl px-6 pb-10 pt-6 md:px-8">
       <section className="columns-1 gap-4 sm:columns-2 lg:columns-3">
