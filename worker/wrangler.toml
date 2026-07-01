@@ -1,0 +1,13 @@
+name = "placeyface-images"
+main = "src/index.ts"
+compatibility_date = "2026-02-25"
+
+# Configure these in Cloudflare dashboard for each environment.
+# wrangler.toml keeps defaults local-friendly.
+[vars]
+CLOUDFLARE_PUBLIC_DEVELOPMENT_URL = ""
+CLOUDFLARE_PUBLIC_DEVELOPMENT_URL_THUMBS = ""
+
+[[r2_buckets]]
+binding = "THUMBS_BUCKET"
+bucket_name = "thumbs"

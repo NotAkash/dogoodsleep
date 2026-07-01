@@ -10,4 +10,4 @@ export type ImagesPage = {
 	nextCursor: string | null;
 };
 
-export const PLACES_FACES_IMAGE_COUNT = 12;
+export const PLACES_FACES_IMAGE_COUNT = 10;

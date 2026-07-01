@@ -33,6 +33,7 @@ pnpm-debug.log*
 .env.development
 .env.test
 .env.production
+worker/.dev.vars
 
 # vercel
 .vercel

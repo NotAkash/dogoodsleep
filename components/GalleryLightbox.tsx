@@ -34,7 +34,7 @@ export function GalleryLightbox({ images }: GalleryLightboxProps) {
                     <p className="text-xs uppercase tracking-[0.2em] text-white/50">do-good-sleep</p>
                     <h2 className="mt-3 text-4xl font-semibold leading-tight text-white">Places & Faces</h2>
                     <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/70">
-                        A curation of Places & Faces i've encountered along the way.
+                        A curation of randomly selected images from the do-good-sleep collection, showcasing a variety of places and faces. Click on any image to view it in full resolution and explore the details.
                     </p>
                 </article>
                 {images.map((image) => (
