@@ -1,16 +1,13 @@
-import { getRandomImages } from "@/lib/r2";
-import { GalleryLightbox } from "@/components/GalleryLightbox";
-import { PLACES_FACES_IMAGE_COUNT } from "@/types";
+import { PlacesFacesGallery } from "@/components/places-faces-gallery";
+import { normalizeGalleryBaseUrl } from "@/data/remote-gallery";
 
-export const runtime = "edge";
-export const dynamic = "force-dynamic";
+export default function PlacesFacesPage() {
+  const imageApiUrl = normalizeGalleryBaseUrl(process.env.IMAGES_API_URL);
 
-export default async function PlacesFacesPage() {
-    const images = await getRandomImages(PLACES_FACES_IMAGE_COUNT);
-
-    return (
-        <main className="mx-auto w-full max-w-5xl px-6 pb-8 pt-4 md:px-8">
-            <GalleryLightbox images={images} />
-        </main>
-    );
+  return (
+    <main className="mx-auto min-h-[calc(100vh-84px)] w-full max-w-[1600px] px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+      <h1 className="sr-only">Places & Faces</h1>
+      <PlacesFacesGallery imageApiUrl={imageApiUrl} />
+    </main>
+  );
 }

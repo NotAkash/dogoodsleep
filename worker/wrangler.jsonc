@@ -1,0 +1,15 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "placeyface-images",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "vars": {
+    "THUMBS_PUBLIC_URL": "https://pub-b196abfec6414f1a897dfa5816f6f10b.r2.dev"
+  },
+  "r2_buckets": [
+    {
+      "binding": "THUMBS_BUCKET",
+      "bucket_name": "thumbs"
+    }
+  ]
+}
