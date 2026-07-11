@@ -4,6 +4,7 @@ export interface Env {
 }
 
 type GalleryImage = {
+  id: string;
   src: string;
   alt: string;
 };
@@ -37,20 +38,6 @@ function toAlt(key: string): string {
     ?.replace(/\.[^.]+$/, "")
     .replace(/[-_]+/g, " ")
     .trim() || "Gallery image";
-}
-
-function shuffle<T>(items: T[]): T[] {
-  const shuffled = [...items];
-
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [
-      shuffled[swapIndex],
-      shuffled[index],
-    ];
-  }
-
-  return shuffled;
 }
 
 async function listAllObjects(bucket: R2Bucket): Promise<ListedObject[]> {
@@ -97,22 +84,30 @@ export default {
       return json({ error: "Not found" }, { status: 404 });
     }
 
-    const limitParam = Number(url.searchParams.get("limit") ?? "10");
+    const limitParam = Number(url.searchParams.get("limit") ?? "20");
+    const pageParam = Number(url.searchParams.get("page") ?? "1");
     const limit = Number.isFinite(limitParam)
       ? Math.max(1, Math.min(limitParam, 48))
-      : 10;
+      : 20;
+    const page = Number.isFinite(pageParam) ? Math.max(1, pageParam) : 1;
     const publicUrl = env.THUMBS_PUBLIC_URL.replace(/\/+$/, "");
 
     const listed = await listAllObjects(env.THUMBS_BUCKET);
-    const images: GalleryImage[] = shuffle(
-      listed.filter((object) => !object.key.endsWith("/")),
-    )
-      .slice(0, limit)
+    const orderedObjects = listed
+      .filter((object) => !object.key.endsWith("/"))
+      .sort((left, right) => left.key.localeCompare(right.key));
+    const total = orderedObjects.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const safePage = Math.min(page, totalPages);
+    const startIndex = (safePage - 1) * limit;
+    const images: GalleryImage[] = orderedObjects
+      .slice(startIndex, startIndex + limit)
       .map((object) => ({
+        id: object.key,
         src: `${publicUrl}/${encodeURI(object.key)}`,
         alt: toAlt(object.key),
       }));
 
-    return json({ images });
+    return json({ images, page: safePage, total, totalPages });
   },
 };
