@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getGalleryImages, type GalleryImage } from "@/data/remote-gallery";
+import {
+  getGalleryImages,
+  type GalleryImage,
+  type GalleryPageRequest,
+} from "@/data/remote-gallery";
 
 type PlacesFacesGalleryProps = {
   imageApiUrl: string;
@@ -17,6 +21,8 @@ export function PlacesFacesGallery({
   const [error, setError] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [page, setPage] = useState(1);
+  const [requestedPage, setRequestedPage] =
+    useState<GalleryPageRequest>("last");
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [hasPaginationMeta, setHasPaginationMeta] = useState(false);
@@ -29,10 +35,14 @@ export function PlacesFacesGallery({
         setLoading(true);
         setError(null);
 
-        const nextPage = await getGalleryImages(imageApiUrl, page, IMAGES_PER_PAGE);
+        const nextPage = await getGalleryImages(
+          imageApiUrl,
+          requestedPage,
+          IMAGES_PER_PAGE,
+        );
 
         if (isMounted) {
-          setImages(nextPage.images);
+          setImages([...nextPage.images].reverse());
           setPage(nextPage.page);
           setTotal(nextPage.total);
           setTotalPages(nextPage.totalPages);
@@ -58,7 +68,7 @@ export function PlacesFacesGallery({
     return () => {
       isMounted = false;
     };
-  }, [imageApiUrl, page]);
+  }, [imageApiUrl, requestedPage]);
 
   useEffect(() => {
     if (activeIndex === null) {
@@ -117,7 +127,7 @@ export function PlacesFacesGallery({
 
   useEffect(() => {
     setActiveIndex(null);
-  }, [page]);
+  }, [requestedPage]);
 
   const activeImage = activeIndex === null ? null : images[activeIndex];
   const pageStart = total === 0 ? 0 : (page - 1) * IMAGES_PER_PAGE + 1;
@@ -231,8 +241,10 @@ export function PlacesFacesGallery({
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
-                disabled={loading || page === 1 || !hasPaginationMeta}
+                onClick={() =>
+                  setRequestedPage(Math.min(totalPages, page + 1))
+                }
+                disabled={loading || page === totalPages || !hasPaginationMeta}
                 className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.24em] text-white/70 transition hover:border-white/35 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
               >
                 Previous
@@ -244,8 +256,8 @@ export function PlacesFacesGallery({
               </span>
               <button
                 type="button"
-                onClick={() => setPage((currentPage) => Math.min(totalPages, currentPage + 1))}
-                disabled={loading || page === totalPages || !hasPaginationMeta}
+                onClick={() => setRequestedPage(Math.max(1, page - 1))}
+                disabled={loading || page === 1 || !hasPaginationMeta}
                 className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.24em] text-white/70 transition hover:border-white/35 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
               >
                 Next

@@ -12,6 +12,8 @@ export type GalleryPage = {
   hasPaginationMeta: boolean;
 };
 
+export type GalleryPageRequest = number | "last";
+
 type ImagesResponse = {
   images?: Array<Partial<GalleryImage> & { src?: string; alt?: string }>;
   page?: number;
@@ -21,7 +23,7 @@ type ImagesResponse = {
 
 export async function getGalleryImages(
   baseUrl: string,
-  page = 1,
+  page: GalleryPageRequest = 1,
   limit = 20,
 ): Promise<GalleryPage> {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
@@ -45,7 +47,7 @@ export async function getGalleryImages(
 
   const data = (await response.json()) as ImagesResponse;
   const images = (data.images ?? []).map((image, index) => ({
-    id: image.id ?? image.src ?? `image-${page}-${index}`,
+    id: image.id ?? image.src ?? `image-${String(page)}-${index}`,
     src: image.src ?? "",
     alt: image.alt ?? "Gallery image",
   }));
@@ -53,10 +55,11 @@ export async function getGalleryImages(
     typeof data.page === "number" &&
     typeof data.total === "number" &&
     typeof data.totalPages === "number";
+  const fallbackPage = typeof page === "number" ? page : 1;
 
   return {
     images,
-    page: data.page ?? page,
+    page: data.page ?? fallbackPage,
     total: data.total ?? images.length,
     totalPages: data.totalPages ?? 1,
     hasPaginationMeta,
