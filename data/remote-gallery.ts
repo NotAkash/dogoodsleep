@@ -46,11 +46,21 @@ export async function getGalleryImages(
   }
 
   const data = (await response.json()) as ImagesResponse;
-  const images = (data.images ?? []).map((image, index) => ({
-    id: image.id ?? image.src ?? `image-${String(page)}-${index}`,
-    src: image.src ?? "",
-    alt: image.alt ?? "Gallery image",
-  }));
+  const images = (data.images ?? []).flatMap((image) => {
+    const src = image.src?.trim();
+
+    if (!src) {
+      return [];
+    }
+
+    return [
+      {
+        id: image.id?.trim() || src,
+        src,
+        alt: image.alt?.trim() || "Gallery image",
+      },
+    ];
+  });
   const hasPaginationMeta =
     typeof data.page === "number" &&
     typeof data.total === "number" &&

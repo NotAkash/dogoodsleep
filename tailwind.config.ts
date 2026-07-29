@@ -7,7 +7,13 @@ const config: Config = {
     "./data/**/*.{js,ts,jsx,tsx,mdx}"
   ],
   theme: {
-    extend: {}
+    extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)", "sans-serif"],
+        serif: ["var(--font-sans)", "sans-serif"],
+        mono: ["var(--font-sans)", "sans-serif"],
+      },
+    },
   },
   plugins: []
 };

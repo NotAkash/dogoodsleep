@@ -3,11 +3,19 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { MainNav } from "@/components/MainNav";
 
-const inter = Inter({ subsets: ["latin"], display: "swap" });
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
-  title: "Place Y Face",
-  description: "Minimalist photography portfolio"
+  title: {
+    default: "Place Y Face",
+    template: "%s — Place Y Face",
+  },
+  description:
+    "Akash's photographic archive and field notes from Toronto.",
 };
 
 export default function RootLayout({
@@ -17,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={inter.variable}>
         <MainNav />
         {children}
       </body>
