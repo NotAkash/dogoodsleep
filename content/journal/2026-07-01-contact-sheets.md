@@ -1,9 +1,8 @@
 ---
-title: "Building the contact sheet"
+title: "Homework"
 date: "July 2026"
-summary: "A note on turning the gallery into a slower, more deliberate archive."
+summary: "What do I want to be doing"
 ---
 
-I want the photographs to feel sequenced instead of tossed onto the page.
+I want the photographs to feel sequenced instead of tossed onto the page. I want this website to be something i build for myself.
 
-The archive works better when each frame can echo the one before it: a face after a window, a blur after a still room, a hard noon after a blue midnight.
