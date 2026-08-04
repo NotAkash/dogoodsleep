@@ -85,11 +85,11 @@ export default {
     }
 
     const limitParam = Number(url.searchParams.get("limit") ?? "20");
-    const pageParam = Number(url.searchParams.get("page") ?? "1");
+    const requestedPage = url.searchParams.get("page") ?? "1";
+    const pageParam = Number(requestedPage);
     const limit = Number.isFinite(limitParam)
       ? Math.max(1, Math.min(limitParam, 48))
       : 20;
-    const page = Number.isFinite(pageParam) ? Math.max(1, pageParam) : 1;
     const publicUrl = env.THUMBS_PUBLIC_URL.replace(/\/+$/, "");
 
     const listed = await listAllObjects(env.THUMBS_BUCKET);
@@ -98,6 +98,11 @@ export default {
       .sort((left, right) => left.key.localeCompare(right.key));
     const total = orderedObjects.length;
     const totalPages = Math.max(1, Math.ceil(total / limit));
+    const page = requestedPage === "last"
+      ? totalPages
+      : Number.isFinite(pageParam)
+        ? Math.max(1, pageParam)
+        : 1;
     const safePage = Math.min(page, totalPages);
     const startIndex = (safePage - 1) * limit;
     const images: GalleryImage[] = orderedObjects
