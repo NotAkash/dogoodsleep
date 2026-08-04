@@ -6,10 +6,6 @@ const focusAreas = [
 
 const currentSections = [
   {
-    label: "Now",
-    value: "Building a sharper home for photographs, notes, and selected work.",
-  },
-  {
     label: "Based",
     value: "Toronto, with work shaped by streets, transit, interiors, and late light.",
   },
@@ -21,78 +17,72 @@ const currentSections = [
 
 export default function ResumePage() {
   return (
-    <main className="relative min-h-[calc(100vh-84px)] overflow-hidden bg-[#050505]">
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent_32%),radial-gradient(circle_at_85%_15%,rgba(255,255,255,0.08),transparent_20%)]" />
-      <section className="relative mx-auto w-full max-w-6xl px-6 py-8 sm:px-8 sm:py-10 lg:px-10">
-        <div className="grid gap-10 border-b border-white/10 pb-10 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
+    <main className="paper-page min-h-[calc(100vh-65px)] bg-[var(--paper)] text-[var(--ink)]">
+      <section className="mx-auto w-full max-w-7xl px-4 pb-14 pt-10 sm:px-6 sm:pb-20 sm:pt-16 lg:px-8 lg:pt-20">
+        <div className="grid gap-10 border-b border-[var(--rule)] pb-10 sm:pb-14 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.34em] text-white/45">
-              Resume / About
+            <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[var(--accent)]">
+              About / Akash
             </p>
-            <h1 className="mt-4 max-w-4xl text-4xl font-medium tracking-[-0.05em] text-white sm:text-5xl lg:text-6xl">
-              A working profile for the person behind the archive.
+            <h1 className="mt-5 max-w-4xl font-serif text-4xl leading-[0.98] tracking-[-0.045em] sm:text-6xl lg:text-7xl">
+              Photographs shaped by Toronto streets, transit, interiors, and
+              late light.
             </h1>
-            <p className="mt-5 max-w-2xl text-sm leading-8 text-white/62 sm:text-base">
-              This page stays intentionally lean for now: a short introduction,
-              the kind of work this site is moving toward, and the shape of the
-              collaborations it can support.
+            <p className="mt-6 max-w-2xl text-sm leading-7 text-[var(--muted)] sm:text-base sm:leading-8">
+              Place Y Face is Akash&apos;s photographic archive and notebook,
+              bringing observed frames, deliberate sequences, and short field
+              notes into one place.
             </p>
           </div>
 
-          <div className="grid gap-4">
+          <dl className="border-t border-[var(--rule)]">
             {currentSections.map((section) => (
-              <div
-                key={section.label}
-                className="border border-white/10 bg-white/[0.03] p-4"
-              >
-                <p className="text-[11px] uppercase tracking-[0.28em] text-white/38">
+              <div key={section.label} className="border-b border-[var(--rule)] py-4">
+                <dt className="text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--accent)]">
                   {section.label}
-                </p>
-                <p className="mt-3 text-sm leading-7 text-white/72">
+                </dt>
+                <dd className="mt-2 text-sm leading-6 text-[var(--muted)]">
                   {section.value}
-                </p>
+                </dd>
               </div>
             ))}
-          </div>
+          </dl>
         </div>
 
-        <div className="grid gap-6 py-10 lg:grid-cols-[0.9fr_1.1fr]">
-          <section className="border border-white/10 bg-white/[0.03] p-6">
-            <p className="text-[11px] uppercase tracking-[0.28em] text-white/38">
+        <div className="grid gap-12 py-10 sm:py-14 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-20 lg:py-16">
+          <section>
+            <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--accent)]">
               Focus
             </p>
-            <div className="mt-5 space-y-4">
+            <ol className="mt-5 border-t border-[var(--rule)]">
               {focusAreas.map((area, index) => (
-                <div key={area} className="border-t border-white/10 pt-4 first:border-t-0 first:pt-0">
-                  <p className="text-xs uppercase tracking-[0.24em] text-white/34">
+                <li
+                  key={area}
+                  className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-3 border-b border-[var(--rule)] py-4"
+                >
+                  <span className="font-mono text-[10px] tracking-[0.16em] text-[var(--muted)]">
                     {String(index + 1).padStart(2, "0")}
-                  </p>
-                  <p className="mt-2 text-sm leading-7 text-white/74">{area}</p>
-                </div>
+                  </span>
+                  <span className="text-sm leading-6 text-[var(--ink)]">{area}</span>
+                </li>
               ))}
-            </div>
+            </ol>
           </section>
 
-          <section className="border border-white/10 bg-white/[0.03] p-6">
-            <p className="text-[11px] uppercase tracking-[0.28em] text-white/38">
+          <section className="lg:border-l lg:border-[var(--rule)] lg:pl-12">
+            <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--accent)]">
               Short bio
             </p>
-            <div className="mt-5 space-y-5 text-sm leading-8 text-white/72 sm:text-base">
+            <div className="mt-5 max-w-2xl space-y-5 font-serif text-xl leading-8 text-[var(--ink)] sm:text-2xl sm:leading-9">
               <p>
-                Place Y Face is becoming a small editorial portfolio: part image
-                archive, part notebook, part profile. The work leans toward
-                photographs that feel observed rather than announced.
+                Place Y Face brings Akash&apos;s photography and writing into
+                one working record. The photographs lean toward moments that
+                feel observed rather than announced.
               </p>
               <p>
-                The strongest direction for the site is not a corporate resume,
-                but a selective working biography that can support freelance,
-                artistic, and collaborative opportunities without flattening the
-                tone of the project.
-              </p>
-              <p>
-                As the site grows, this page can expand with concrete client
-                history, exhibitions, publications, a downloadable CV, and more
-                direct contact details.
+                The journal holds notes on sequence, memory, and recurring
+                details. Akash is open to commissions, documentation, editorial
+                projects, and creative collaborations.
               </p>
             </div>
           </section>

@@ -1,9 +1,7 @@
 ---
-title: "Places that linger"
+title: "Is this summer"
 date: "May 2026"
-summary: "A short field note about locations that stay in the mind longer than expected."
+summary: "4 Cities, 2 Countries; 1 Month"
 ---
 
-Some places matter because they are dramatic.
-
-Others matter because they keep leaking back into memory for no obvious reason. Those are usually the ones worth revisiting, especially with patience.
+Kingston, Toronto, New Delhi, Halifax.

@@ -5,8 +5,10 @@ export default function PlacesFacesPage() {
   const imageApiUrl = normalizeGalleryBaseUrl(process.env.IMAGES_API_URL);
 
   return (
-    <main className="mx-auto min-h-[calc(100vh-84px)] w-full max-w-[1600px] px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
-      <h1 className="sr-only">Places & Faces</h1>
+    <main
+      id="main-content"
+      className="archive-main min-h-[calc(100vh-65px)] w-full px-5 pb-0 pt-10 sm:px-10 sm:pt-16 lg:px-12 lg:pt-20"
+    >
       <PlacesFacesGallery imageApiUrl={imageApiUrl} />
     </main>
   );
