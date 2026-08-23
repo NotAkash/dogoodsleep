@@ -58,7 +58,18 @@ export default function HomePage() {
                     {homeContent.statusItems.map((item) => (
                         <div key={item.label}>
                             <dt>{item.label}</dt>
-                            <dd>{item.value}</dd>
+                            <dd>
+                                {item.url ? (
+                                    <a
+                                        href={item.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label={`${item.label}: ${item.value} (opens in a new tab)`}
+                                    >
+                                        {item.value} <span aria-hidden="true">↗</span>
+                                    </a>
+                                ) : item.value}
+                            </dd>
                         </div>
                     ))}
                 </dl>

@@ -14,7 +14,7 @@ links_empty: "Nothing pinned right now."
 - Thinking About — Getting a tattoo
 - Building — https://transit-tracker.dogoodsleep.com/
 
-## Elsewhere
+## Elsewhere On The Internet
 
 <!-- Add external links using this format:
 - [Article or post title](https://example.com) — An optional note about the link

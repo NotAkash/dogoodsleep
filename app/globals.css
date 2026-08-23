@@ -401,6 +401,12 @@ button {
   line-height: 1.55;
 }
 
+.home-now-list dd a {
+  border-bottom: 1px solid rgba(237, 240, 235, 0.4);
+  overflow-wrap: anywhere;
+  padding-bottom: 0.15rem;
+}
+
 .home-links {
   max-width: 1720px;
   margin: 0 auto;
@@ -411,10 +417,17 @@ button {
   display: grid;
   align-items: end;
   gap: clamp(1.5rem, 4vw, 5rem);
-  grid-template-columns: 0.32fr minmax(18rem, 1.18fr) minmax(14rem, 0.62fr);
+  grid-template-columns: minmax(18rem, 1.18fr) 0.32fr minmax(14rem, 0.62fr);
+}
+
+.home-links-header .eyebrow {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .home-links-header h2 {
+  grid-column: 1;
+  grid-row: 1;
   margin: 0;
   font-size: clamp(2.5rem, 4vw, 4.8rem);
   font-weight: 540;
@@ -777,6 +790,12 @@ button {
   .home-links-header {
     gap: 2rem;
     grid-template-columns: 1fr;
+  }
+
+  .home-links-header .eyebrow,
+  .home-links-header h2 {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .home-now-list {

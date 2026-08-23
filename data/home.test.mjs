@@ -18,10 +18,11 @@ links_empty: "Nothing pinned."
 
 - Building — Do Good Sleep
 - Following — Leeds United
+- Using -- https://transit-tracker.dogoodsleep.com/
 
 ## Elsewhere
 
-- [A real post](https://example.org/post) — Why it is worth reading
+- [A real post](https://example.org/post) -- Why it is worth reading
 
 <!--
 - [Example only](https://example.com) — This must not render
@@ -32,6 +33,11 @@ links_empty: "Nothing pinned."
   assert.deepEqual(home.statusItems, [
     { label: "Building", value: "Do Good Sleep" },
     { label: "Following", value: "Leeds United" },
+    {
+      label: "Using",
+      value: "https://transit-tracker.dogoodsleep.com/",
+      url: "https://transit-tracker.dogoodsleep.com/",
+    },
   ]);
   assert.deepEqual(home.externalLinks, [{
     title: "A real post",

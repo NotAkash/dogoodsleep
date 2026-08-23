@@ -4,6 +4,7 @@ import path from "node:path";
 export type HomeStatusItem = {
   label: string;
   value: string;
+  url?: string;
 };
 
 export type HomeExternalLink = {
@@ -85,7 +86,7 @@ function parseStatusItems(section: string): HomeStatusItem[] {
     .filter((line) => line.startsWith("- "))
     .flatMap((line) => {
       const item = line.slice(2);
-      const separator = item.match(/\s+(?:—|-)\s+/);
+      const separator = item.match(/\s+(?:—|--|-)\s+/);
 
       if (!separator || separator.index === undefined) {
         return [];
@@ -94,7 +95,13 @@ function parseStatusItems(section: string): HomeStatusItem[] {
       const label = item.slice(0, separator.index).trim();
       const value = item.slice(separator.index + separator[0].length).trim();
 
-      return label && value ? [{ label, value }] : [];
+      return label && value
+        ? [{
+            label,
+            value,
+            ...(isExternalUrl(value) ? { url: value } : {}),
+          }]
+        : [];
     });
 }
 
@@ -115,7 +122,7 @@ function parseExternalLinks(section: string): HomeExternalLink[] {
     .filter((line) => line.startsWith("- ["))
     .flatMap((line) => {
       const match = line.match(
-        /^- \[([^\]]+)]\(([^)]+)\)(?:\s+(?:—|-)\s+(.+))?$/,
+        /^- \[([^\]]+)]\(([^)]+)\)(?:\s+(?:—|--|-)\s+(.+))?$/,
       );
 
       if (!match || !isExternalUrl(match[2])) {
