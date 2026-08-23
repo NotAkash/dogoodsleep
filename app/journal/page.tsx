@@ -17,9 +17,8 @@ export default function JournalPage() {
             </h1>
           </div>
           <p className="max-w-md text-sm leading-7 text-[var(--muted)] sm:text-base">
-            What did Greg Heffley say? &quot;It&apos;s not a diary, it&apos;s a journal.&quot; This is my journal.
-            It is not a diary. It is not a blog. It is not a newsletter. It is not a social media feed. It is not a publication. It is not a portfolio.
-            It most definitely is not a substack. I don&apos;t actually know what this is.
+            What did Greg Heffley say? &quot;It&apos;s not a diary, it&apos;s a journal.&quot; This is a journal.
+            It is not a blog, and it most definitely is not a substack. I don&apos;t actually know what this is.
           </p>
         </div>
 

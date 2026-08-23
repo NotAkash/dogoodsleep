@@ -18,7 +18,7 @@ type ArchiveIndexProps = {
   archiveTotal: number;
   folders: ArchiveFolder[];
   loading: boolean;
-  onSelect: (folder: string | null) => void;
+  onSelect: (folder: string | null, hasChildren: boolean) => void;
   selectedFolder: string | null;
 };
 
@@ -43,7 +43,7 @@ function ArchiveFolderItems({
               className="archive-folder-button"
               aria-current={selectedFolder === folder.id ? "page" : undefined}
               aria-expanded={hasChildren ? isExpanded : undefined}
-              onClick={() => onSelect(folder.id)}
+              onClick={() => onSelect(folder.id, hasChildren)}
             >
               <span className="archive-folder-label">
                 <span>{folder.label}</span>
@@ -84,7 +84,7 @@ function ArchiveIndex({
         type="button"
         className="archive-folder-button archive-folder-all"
         aria-current={selectedFolder === null ? "page" : undefined}
-        onClick={() => onSelect(null)}
+        onClick={() => onSelect(null, false)}
       >
         <span>All photos</span>
         <span className="archive-folder-count" aria-hidden="true">
@@ -372,8 +372,11 @@ export function PlacesFacesGallery({
   const getImageKey = (image: GalleryImage, index: number) =>
     `${selectedFolder ?? "all"}-${page}-${image.id}-${index}`;
 
-  const handleFolderSelect = (folder: string | null) => {
-    if (mobileIndexOpen) {
+  const handleFolderSelect = (
+    folder: string | null,
+    hasChildren = false,
+  ) => {
+    if (mobileIndexOpen && !hasChildren) {
       setMobileIndexOpen(false);
       window.requestAnimationFrame(() => mobileSummaryRef.current?.focus());
     }
