@@ -18,5 +18,5 @@ links_empty: "Nothing pinned right now."
 <!-- Add external links using this format:
 - [Article or post title](https://example.com) — An optional note about the link
 -->
-[If you let AI do your writing, I will come to your house and kill you](https://samkriss.substack.com/p/if-you-let-ai-do-your-writing-i-will?utm_source=profile&utm_medium=reader2) -- 10/10 no notes.
+- [If you let AI do your writing, I will come to your house and kill you](https://samkriss.substack.com/p/if-you-let-ai-do-your-writing-i-will?utm_source=profile&utm_medium=reader2) -- 10/10 no notes.
 - [youarelistening.to](https://youarelistening.to/) -- Ambient music with city sounds.
