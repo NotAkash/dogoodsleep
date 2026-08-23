@@ -17,13 +17,9 @@ export default function JournalPage() {
             </h1>
           </div>
           <p className="max-w-md text-sm leading-7 text-[var(--muted)] sm:text-base">
-            What did Greg Heffley say? &quot;It&apos;s not a diary, it&apos;s a journal.&quot; This is my journal. It holds
+            What did Greg Heffley say? &quot;It&apos;s not a diary, it&apos;s a journal.&quot; This is my journal.
             It is not a diary. It is not a blog. It is not a newsletter. It is not a social media feed. It is not a publication. It is not a portfolio.
-            It is not a product. It is not a service. It is not a business. It is not a brand. It is not a company. It is not a startup. It is not an agency.
-            It is not an organization. It is not an institution. It is not a school. It is not a university.
-            It is not a college. It is not a program. It is not a course. It is not a class. It is not a workshop.
-            It is not a seminar. It is not a conference. It is not an event. It is not an exhibition.
-            It is not an installation. It is not an artwork. It is not an object.
+            It most definitely is not a substack. I don't actually know what this is.
           </p>
         </div>
 
