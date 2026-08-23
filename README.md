@@ -43,10 +43,12 @@ already exists in a `.large` folder.
 
 ## Syncing the photo archive to R2
 
-The archive sync script adds new JPEGs from `/Volumes/LaCie/FinalEdits` to the
-`placesyfaces` R2 bucket while preserving their relative folder tree. It
-excludes generated `.large`/`.medium` folders, hidden folders, macOS `._*`
-metadata, and non-JPEG files.
+The archive sync script makes the eligible JPEG objects in the `placesyfaces`
+R2 bucket mirror `/Volumes/LaCie/FinalEdits` while preserving their relative
+folder tree. It detects additions, changed files, folder/file moves, and local
+deletions. Generated `.large`/`.medium` and thumbnail folders/files, hidden
+folders, macOS `._*` metadata, and non-JPEG files are excluded from both the
+comparison and remote deletion scope.
 
 Run a non-mutating preview first:
 
@@ -54,16 +56,17 @@ Run a non-mutating preview first:
 ./scripts/sync-placesyfaces.sh /Volumes/LaCie/FinalEdits
 ```
 
-After reviewing that output, apply mode requires both the flag and an exact
-interactive confirmation:
+Apply mode always repeats the dry run before it can change R2. After reviewing
+the full additions, updates, moves, and removals, it requires both the flag and
+an exact interactive confirmation:
 
 ```bash
 ./scripts/sync-placesyfaces.sh --apply /Volumes/LaCie/FinalEdits
 ```
 
-Apply mode uses `rclone copy --ignore-existing`, so it never replaces an
-existing object. Before uploading, it compares source and R2 checksums. When
-exactly one new source path matches exactly one old R2-only path, it treats
-that as a move: the R2 object is relocated to the new folder and its old key
-is removed. Ambiguous duplicate matches and ordinary local deletions leave
-their old R2 objects untouched.
+Before syncing, the script compares source and R2 checksums. When exactly one
+new source path matches exactly one old R2-only path, it uses an R2-side move
+instead of uploading the photo again. Same-path content changes are explicitly
+replaced. The final `rclone sync --delete-after` uploads the remaining changes
+before removing R2-only eligible JPEGs; rclone suppresses deletion if the sync
+encounters errors. The source drive is read only throughout.

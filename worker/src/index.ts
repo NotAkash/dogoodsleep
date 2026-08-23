@@ -96,10 +96,24 @@ function compareKeys(left: string, right: string): number {
 }
 
 function mtime(object: R2Object): number | undefined {
-  const value = object.customMetadata?.mtime;
+  const value = object.customMetadata?.mtime?.trim();
 
   if (!value) {
     return undefined;
+  }
+
+  const numeric = Number(value);
+
+  if (Number.isFinite(numeric)) {
+    // R2's Workers binding exposes rclone's mtime metadata as Unix seconds,
+    // including fractional seconds, even though S3 clients render it as ISO.
+    const milliseconds = Math.abs(numeric) < 100_000_000_000
+      ? numeric * 1000
+      : numeric;
+
+    return Number.isNaN(new Date(milliseconds).getTime())
+      ? undefined
+      : milliseconds;
   }
 
   const parsed = Date.parse(value);

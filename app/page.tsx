@@ -10,14 +10,14 @@ export default function HomePage() {
             <section className="home-hero">
                 <div className="home-intro">
                     <p className="eyebrow">Akash · Toronto · Portfolio & Projects</p>
-                    <h1>Places .</h1>
+                    <h1>Do Good Sleep</h1>
                     <p className="home-deck">
                         Streets, rooms, passing faces, and late light—held in sequence
                         instead of left to disappear into a camera roll.
                     </p>
                     <div className="home-actions">
                         <Link className="primary-link" href="/places-faces">
-                            View the archive
+                            View Places &amp; Faces
                         </Link>
                         <Link className="text-link" href="/journal">
                             Read the field notes
@@ -42,7 +42,7 @@ export default function HomePage() {
             <section className="home-note">
                 <p className="eyebrow">From the notebook</p>
                 <blockquote>
-                    “The archive works better when each frame can echo the one before it.”
+                    “Places &amp; Faces works better when each frame can echo the one before it.”
                 </blockquote>
                 <div>
                     <p>

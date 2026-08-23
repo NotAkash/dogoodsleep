@@ -29,28 +29,44 @@ function ArchiveFolderItems({
 }: Pick<ArchiveIndexProps, "folders" | "onSelect" | "selectedFolder">) {
   return (
     <ul className="archive-folder-list">
-      {folders.map((folder) => (
-        <li key={folder.id}>
-          <button
-            type="button"
-            className="archive-folder-button"
-            aria-current={selectedFolder === folder.id ? "page" : undefined}
-            onClick={() => onSelect(folder.id)}
-          >
-            <span>{folder.label}</span>
-            <span className="archive-folder-count" aria-hidden="true">
-              {folder.imageCount}
-            </span>
-          </button>
-          {folder.children.length > 0 ? (
-            <ArchiveFolderItems
-              folders={folder.children}
-              onSelect={onSelect}
-              selectedFolder={selectedFolder}
-            />
-          ) : null}
-        </li>
-      ))}
+      {folders.map((folder) => {
+        const hasChildren = folder.children.length > 0;
+        const isExpanded = hasChildren && (
+          selectedFolder === folder.id
+          || selectedFolder?.startsWith(`${folder.id}/`) === true
+        );
+
+        return (
+          <li key={folder.id}>
+            <button
+              type="button"
+              className="archive-folder-button"
+              aria-current={selectedFolder === folder.id ? "page" : undefined}
+              aria-expanded={hasChildren ? isExpanded : undefined}
+              onClick={() => onSelect(folder.id)}
+            >
+              <span className="archive-folder-label">
+                <span>{folder.label}</span>
+                {hasChildren ? (
+                  <span className="archive-folder-disclosure" aria-hidden="true">
+                    {isExpanded ? "−" : "+"}
+                  </span>
+                ) : null}
+              </span>
+              <span className="archive-folder-count" aria-hidden="true">
+                {folder.imageCount}
+              </span>
+            </button>
+            {isExpanded ? (
+              <ArchiveFolderItems
+                folders={folder.children}
+                onSelect={onSelect}
+                selectedFolder={selectedFolder}
+              />
+            ) : null}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -63,7 +79,7 @@ function ArchiveIndex({
   selectedFolder,
 }: ArchiveIndexProps) {
   return (
-    <nav className="archive-index" aria-label="Archive folders">
+    <nav className="archive-index" aria-label="Places & Faces folders">
       <button
         type="button"
         className="archive-folder-button archive-folder-all"
@@ -328,10 +344,10 @@ export function PlacesFacesGallery({
 
   const errorDetail =
     error === "Missing IMAGES_API_URL"
-      ? "The archive source is not connected in this environment."
+      ? "The Places & Faces source is not connected in this environment."
       : error?.startsWith("Image worker request failed:")
-        ? `The archive service returned ${error.replace("Image worker request failed: ", "status ")}.`
-        : "The archive service did not return a usable response.";
+        ? `The Places & Faces service returned ${error.replace("Image worker request failed: ", "status ")}.`
+        : "The Places & Faces service did not return a usable response.";
 
   const handlePrevious = () => {
     setActiveIndex((currentIndex) => {
@@ -383,13 +399,13 @@ export function PlacesFacesGallery({
           <div className="grid gap-10 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:gap-16">
             <div>
               <p className="archive-kicker text-[10px] font-medium uppercase tracking-[0.28em] text-[var(--muted)]">
-                Photographic archive · Newest first
+                Places &amp; Faces · Newest first
               </p>
               <h1
                 id="archive-title"
                 className="archive-title mt-5 text-5xl leading-[0.84] text-[var(--ink)] sm:text-7xl lg:text-[8.5rem]"
               >
-                Places / Faces
+                Places &amp; Faces
               </h1>
             </div>
 
@@ -420,7 +436,7 @@ export function PlacesFacesGallery({
                 </dd>
               </div>
               <div>
-                <dt>Archive</dt>
+                <dt>Collection</dt>
                 <dd className="mt-1.5 font-medium text-[var(--ink)]">
                   {loading
                     ? "Reading"
@@ -443,7 +459,7 @@ export function PlacesFacesGallery({
             onClick={() => setMobileIndexOpen((open) => !open)}
           >
             <span>
-              <span className="archive-mobile-index-label">Browse archive</span>
+              <span className="archive-mobile-index-label">Browse Places &amp; Faces</span>
               <span className="archive-mobile-index-value">
                 {selectedFolder ?? "All photos"}
               </span>
@@ -464,10 +480,10 @@ export function PlacesFacesGallery({
         </div>
 
         <div className="archive-browser">
-          <aside className="archive-desktop-index hidden lg:block" aria-label="Archive index">
+          <aside className="archive-desktop-index hidden lg:block" aria-label="Places & Faces index">
             <div className="archive-index-sticky">
               <div className="archive-index-heading">
-                <p>Archive index</p>
+                <p>Places &amp; Faces index</p>
                 <p>{selectedFolder ? "Filtered set" : "Complete set"}</p>
               </div>
               <ArchiveIndex
@@ -487,7 +503,7 @@ export function PlacesFacesGallery({
             role="alert"
           >
             <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[var(--ink)]">
-              Archive unavailable
+              Places &amp; Faces unavailable
             </p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[var(--ink)]">
               The photographs could not be loaded.
@@ -500,7 +516,7 @@ export function PlacesFacesGallery({
               onClick={() => setLoadAttempt((attempt) => attempt + 1)}
               className="archive-action mt-6 min-h-11 bg-[var(--ink)] px-5 py-3 text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--paper)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)]"
             >
-              Retry archive
+              Retry Places &amp; Faces
             </button>
           </div>
         ) : loading ? (
@@ -508,9 +524,9 @@ export function PlacesFacesGallery({
             className="archive-loading"
             role="status"
             aria-live="polite"
-            aria-label="Loading twenty archive frames"
+            aria-label="Loading twenty Places & Faces photographs"
           >
-            <span className="sr-only">Loading twenty archive frames.</span>
+            <span className="sr-only">Loading twenty Places &amp; Faces photographs.</span>
             <div
               className="columns-2 gap-2.5 sm:columns-3 sm:gap-10 lg:gap-12"
               aria-hidden="true"
@@ -538,8 +554,8 @@ export function PlacesFacesGallery({
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
               {selectedFolder
-                ? "Choose another folder or return to the complete archive."
-                : "This archive set is currently empty."}
+                ? "Choose another folder or return to all of Places & Faces."
+                : "Places & Faces is currently empty."}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               {selectedFolder ? (
@@ -575,7 +591,7 @@ export function PlacesFacesGallery({
 
             <div
               className="archive-grid columns-2 gap-2.5 sm:columns-3 sm:gap-10 lg:gap-12"
-              aria-label="Archive frames"
+              aria-label="Places & Faces photographs"
             >
               {images.map((image, index) => {
                 const frameLabel = getFrameLabel(index);
@@ -614,7 +630,7 @@ export function PlacesFacesGallery({
 
               <nav
                 className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3"
-                aria-label="Archive sets"
+                aria-label="Places & Faces pages"
               >
                 <button
                   type="button"

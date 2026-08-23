@@ -13,7 +13,7 @@ export default function JournalPage() {
               Journal / {String(entries.length).padStart(2, "0")} notes
             </p>
             <h1 className="mt-5 max-w-4xl font-serif text-4xl leading-[0.98] tracking-[-0.045em] sm:text-6xl lg:text-7xl">
-              Field notes from the photographic archive.
+              Field notes from Places &amp; Faces.
             </h1>
           </div>
           <p className="max-w-md text-sm leading-7 text-[var(--muted)] sm:text-base">

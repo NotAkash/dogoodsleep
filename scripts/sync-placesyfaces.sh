@@ -5,7 +5,7 @@ set -euo pipefail
 readonly APPROVED_SOURCE_ROOT="/Volumes/LaCie/FinalEdits"
 readonly RCLONE_REMOTE="placesyfaces:"
 readonly DESTINATION="placesyfaces:placesyfaces"
-readonly APPLY_CONFIRMATION="APPLY NEW FILES AND CONFIRMED MOVES to placesyfaces:placesyfaces"
+readonly APPLY_CONFIRMATION="MIRROR /Volumes/LaCie/FinalEdits to placesyfaces:placesyfaces INCLUDING DELETIONS"
 
 usage() {
   cat <<'USAGE'
@@ -13,10 +13,11 @@ Usage:
   scripts/sync-placesyfaces.sh /Volumes/LaCie/FinalEdits
   scripts/sync-placesyfaces.sh --apply /Volumes/LaCie/FinalEdits
 
-The default mode is a non-mutating rclone dry run. Apply mode requires both
-the --apply flag and an interactive confirmation. It uploads new object keys
-and relocates uniquely checksum-matched moves. Other existing destination
-objects are never replaced or deleted.
+The default mode is a non-mutating rclone dry run. Apply mode first repeats
+that dry run, then requires an exact interactive confirmation. The eligible
+JPEG objects in placesyfaces become a mirror of the approved source: new and
+changed files are uploaded, uniquely checksum-matched moves are relocated,
+and R2-only JPEGs are deleted after successful transfers.
 USAGE
 }
 
@@ -66,6 +67,10 @@ fi
 filter_args=(
   --filter "- *.large/**"
   --filter "- *.medium/**"
+  --filter "- **/[Tt][Hh][Uu][Mm][Bb][Ss]/**"
+  --filter "- **/[Tt][Hh][Uu][Mm][Bb][Nn][Aa][Ii][Ll][Ss]/**"
+  --filter "- **/*[._-][Tt][Hh][Uu][Mm][Bb].[Jj][Pp][Gg]"
+  --filter "- **/*[._-][Tt][Hh][Uu][Mm][Bb].[Jj][Pp][Ee][Gg]"
   --filter "- .*/**"
   --filter "- ._*"
   --filter "+ **/"
@@ -77,9 +82,10 @@ work_dir="$(mktemp -d "${TMPDIR:-/tmp}/placeyface-r2-sync.XXXXXX")" || fail "cou
 source_inventory="$work_dir/source.json"
 destination_inventory="$work_dir/destination.json"
 move_plan="$work_dir/moves"
+update_plan="$work_dir/updates"
 
 cleanup() {
-  rm -f -- "$source_inventory" "$destination_inventory" "$move_plan"
+  rm -f -- "$source_inventory" "$destination_inventory" "$move_plan" "$update_plan"
   rmdir -- "$work_dir" 2>/dev/null || true
 }
 trap cleanup EXIT
@@ -94,7 +100,7 @@ if ! rclone lsjson "$DESTINATION" --recursive --files-only --hash --hash-type MD
   fail "could not inventory the placesyfaces bucket."
 fi
 
-if ! plan_summary="$(python3 - "$source_inventory" "$destination_inventory" "$move_plan" <<'PY'
+if ! plan_summary="$(python3 - "$source_inventory" "$destination_inventory" "$move_plan" "$update_plan" <<'PY'
 import collections
 import json
 import sys
@@ -150,32 +156,61 @@ with open(sys.argv[3], "wb") as plan_file:
         plan_file.write(old_path.encode("utf-8") + b"\0")
         plan_file.write(new_path.encode("utf-8") + b"\0")
 
-print(len(source), len(destination), len(moves), ambiguous_groups)
+updates = []
+for object_path in sorted(set(source) & set(destination)):
+    source_size, source_md5 = source[object_path]
+    destination_size, destination_md5 = destination[object_path]
+    sizes_differ = source_size != destination_size
+    checksums_differ = bool(source_md5 and destination_md5 and source_md5 != destination_md5)
+    if sizes_differ or checksums_differ:
+        updates.append(object_path)
+
+with open(sys.argv[4], "wb") as plan_file:
+    for object_path in updates:
+        plan_file.write(object_path.encode("utf-8") + b"\0")
+
+addition_count = len(new_source) - len(moves)
+removal_count = len(old_destination) - len(moves)
+
+print(
+    len(source),
+    len(destination),
+    addition_count,
+    len(updates),
+    len(moves),
+    removal_count,
+    ambiguous_groups,
+)
 PY
 )"; then
   fail "could not compare source and destination inventories."
 fi
 
-read -r source_count destination_count move_count ambiguous_count <<<"$plan_summary"
+read -r source_count destination_count addition_count update_count move_count removal_count ambiguous_count <<<"$plan_summary"
 
 printf 'Inventory:   %s source JPEGs; %s destination JPEGs\n' "$source_count" "$destination_count"
+printf 'Additions:   %s new path(s) not handled as moves\n' "$addition_count"
+printf 'Updates:     %s checksum/size-changed existing path(s)\n' "$update_count"
 printf 'Moves:       %s uniquely checksum-matched path change(s)\n' "$move_count"
+printf 'Removals:    %s R2-only path(s) not handled as moves\n' "$removal_count"
 
 if [[ "$ambiguous_count" -gt 0 ]]; then
-  printf 'Warning:     %s duplicate-checksum group(s) were ambiguous; their old R2 paths will be kept.\n' "$ambiguous_count" >&2
+  printf 'Note:        %s duplicate-checksum group(s) cannot use the move optimization; sync will transfer and remove them normally.\n' "$ambiguous_count" >&2
 fi
 
 while IFS= read -r -d '' old_path && IFS= read -r -d '' new_path; do
   printf '             %q -> %q\n' "$old_path" "$new_path"
 done <"$move_plan"
 
-rclone_args=(
+sync_args=(
   rclone
-  copy
+  sync
   "$source_root"
   "$DESTINATION"
   "${filter_args[@]}"
-  --ignore-existing
+  --check-first
+  --delete-after
+  --metadata
   --verbose
   --progress
   --stats 15s
@@ -184,15 +219,28 @@ rclone_args=(
 
 printf 'Source:      %s\n' "$source_root"
 printf 'Destination: %s\n' "$DESTINATION"
-printf 'Files:       JPEG only; generated, hidden, metadata, and non-JPEG files excluded\n'
+printf 'Files:       JPEG only; generated, thumbnail, hidden, metadata, and non-JPEG files excluded\n'
 
 if [[ "$apply" == false ]]; then
   printf 'Mode:        dry run (no remote changes)\n'
-  printf 'Note:        apply uploads new keys and relocates only the confirmed moves above.\n'
-  printf '             Other existing objects stay unchanged.\n\n'
-  rclone_args+=(--dry-run)
+  printf 'Note:        apply makes eligible R2 JPEGs match the source, including updates and removals.\n\n'
 else
-  printf 'Mode:        APPLY (new keys and confirmed moves only)\n'
+  printf 'Mode:        APPLY requested; running the required dry run first.\n\n'
+fi
+
+if "${sync_args[@]}" --dry-run; then
+  :
+else
+  status=$?
+  printf '\nrclone dry run failed with exit status %s; no remote changes were made.\n' "$status" >&2
+  exit "$status"
+fi
+
+if [[ "$apply" == false ]]; then
+  printf '\nDry run completed successfully; no remote changes were made.\n'
+  exit 0
+else
+  printf '\nDry run completed. Review the additions, updates, moves, and removals above.\n'
   printf 'Type exactly "%s" to continue: ' "$APPLY_CONFIRMATION"
   IFS= read -r confirmation
 
@@ -207,14 +255,17 @@ else
       fail "could not safely relocate R2 object: $old_path"
     fi
   done <"$move_plan"
+
+  while IFS= read -r -d '' object_path; do
+    printf 'Updating changed R2 object: %q\n' "$object_path"
+    if ! rclone copyto "$source_root/$object_path" "$DESTINATION/$object_path" --metadata --verbose; then
+      fail "could not update changed R2 object: $object_path"
+    fi
+  done <"$update_plan"
 fi
 
-if "${rclone_args[@]}"; then
-  if [[ "$apply" == true ]]; then
-    printf '\nArchive update completed successfully.\n'
-  else
-    printf '\nDry run completed successfully; no remote changes were made.\n'
-  fi
+if "${sync_args[@]}"; then
+  printf '\nArchive mirror completed successfully.\n'
 else
   status=$?
   printf '\nrclone failed with exit status %s.\n' "$status" >&2

@@ -158,6 +158,21 @@ test("equal or absent mtime metadata uses a deterministic key fallback", async (
   ]);
 });
 
+test("sorts rclone Unix-second mtime metadata returned by the R2 Workers binding", async () => {
+  const r2Objects = [
+    object("2023/Fall/older.jpg", "1703151654.82"),
+    object("2026/Summer26/HousewarmingJuly/IMG_9166.jpg", "1785389286.45"),
+    object("2026/Winter26/March/middle.jpg", "1773133200"),
+  ];
+  const { body } = await request("/images?limit=48", r2Objects);
+
+  assert.deepEqual(body.images.map((image) => image.id), [
+    "2026/Summer26/HousewarmingJuly/IMG_9166.jpg",
+    "2026/Winter26/March/middle.jpg",
+    "2023/Fall/older.jpg",
+  ]);
+});
+
 test("reads every truncated R2 page with custom metadata included", async () => {
   const listCalls = [];
   const env = {

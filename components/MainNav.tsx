@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-    { href: "/places-faces", label: "Archive" },
+    { href: "/places-faces", label: "Places & Faces" },
     { href: "/journal", label: "Journal" },
     { href: "/resume", label: "About" },
 ];
@@ -20,11 +20,11 @@ export function MainNav() {
             >
                 <Link
                     href="/"
-                    aria-label="Place Y Face, home"
+                    aria-label="Do Good Sleep, home"
                     aria-current={pathname === "/" ? "page" : undefined}
                     className="shrink-0 text-[13px] font-semibold uppercase tracking-[0.16em] text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)] sm:text-sm sm:tracking-[0.2em]"
                 >
-                    Place Y Face
+                    Do Good Sleep
                 </Link>
 
                 <div className="flex items-center gap-4 sm:gap-7">

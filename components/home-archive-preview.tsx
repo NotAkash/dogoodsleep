@@ -69,17 +69,17 @@ export function HomeArchivePreview({
   if (state.status === "error") {
     return (
       <div className="preview-state preview-state-message" role="status">
-        <p className="eyebrow">Archive connection</p>
+        <p className="eyebrow">Places &amp; Faces connection</p>
         <p className="preview-state-title">The preview is off the light table.</p>
         <p>
-          The archive is still here. Try the connection again or enter the full
+          Places &amp; Faces is still here. Try the connection again or enter the full
           sequence.
         </p>
         <div className="preview-state-actions">
           <button type="button" onClick={() => setRequestKey((key) => key + 1)}>
             Try again
           </button>
-          <Link href="/places-faces">Open archive</Link>
+          <Link href="/places-faces">View Places &amp; Faces</Link>
         </div>
       </div>
     );
@@ -107,7 +107,7 @@ export function HomeArchivePreview({
     <Link
       href="/places-faces"
       className="archive-preview"
-      aria-label="Open the Places and Faces archive"
+      aria-label="View Places & Faces"
     >
       <div className="archive-preview-heading">
         <span>Latest sequence</span>
@@ -132,14 +132,14 @@ export function HomeArchivePreview({
                     : index + 1,
                 ).padStart(state.page.hasPaginationMeta ? 3 : 2, "0")}
               </span>
-              <span>{index === 0 ? "Recent" : "Archive"}</span>
+              <span>{index === 0 ? "Recent" : "Places & Faces"}</span>
             </figcaption>
           </figure>
         ))}
       </div>
 
       <span className="archive-preview-link">
-        Enter the archive <span aria-hidden="true">↗</span>
+        View Places &amp; Faces <span aria-hidden="true">↗</span>
       </span>
     </Link>
   );

@@ -1,17 +1,17 @@
 const focusAreas = [
-  "Photography direction and sequencing",
-  "Editorial storytelling across image and text",
-  "Portfolio development and visual identity",
+  "Lorem ipsum dolor sit amet",
+  "consectetur adipiscing elit",
+  "sed do eiusmod tempor incididunt",
 ];
 
 const currentSections = [
   {
     label: "Based",
-    value: "Toronto, with work shaped by streets, transit, interiors, and late light.",
+    value: "Toronto",
   },
   {
-    label: "Open to",
-    value: "Creative collaborations, commissions, documentation, and editorial projects.",
+    label: "Currently @",
+    value: "GRO Rotational @ Manulife",
   },
 ];
 
@@ -25,13 +25,10 @@ export default function ResumePage() {
               About / Akash
             </p>
             <h1 className="mt-5 max-w-4xl font-serif text-4xl leading-[0.98] tracking-[-0.045em] sm:text-6xl lg:text-7xl">
-              Photographs shaped by Toronto streets, transit, interiors, and
-              late light.
+              23 Year Old Toronto-Based Hobbyist and Engineer
             </h1>
             <p className="mt-6 max-w-2xl text-sm leading-7 text-[var(--muted)] sm:text-base sm:leading-8">
-              Place Y Face is Akash&apos;s photographic archive and notebook,
-              bringing observed frames, deliberate sequences, and short field
-              notes into one place.
+              Do Good Sleep is a personal portfolio and notebook, made to hold a lot of my work together.
             </p>
           </div>
 
@@ -75,14 +72,11 @@ export default function ResumePage() {
             </p>
             <div className="mt-5 max-w-2xl space-y-5 font-serif text-xl leading-8 text-[var(--ink)] sm:text-2xl sm:leading-9">
               <p>
-                Place Y Face brings Akash&apos;s photography and writing into
-                one working record. The photographs lean toward moments that
-                feel observed rather than announced.
+                A Queen&apos;s Computing graduate, Akash is a Toronto-based data engineer. He has a passion for exploring the intersection of technology, art, and experience. Originally from New Delhi, India.
+                This website serves as a personal portfolio accumilating passion projects and creative work. It is not to be taken seriously.
               </p>
               <p>
-                The journal holds notes on sequence, memory, and recurring
-                details. Akash is open to commissions, documentation, editorial
-                projects, and creative collaborations.
+                Akash is also very passionate about Leeds United.
               </p>
             </div>
           </section>
