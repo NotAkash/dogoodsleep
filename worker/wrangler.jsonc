@@ -5,8 +5,9 @@
   "compatibility_date": "2026-08-23",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "LETTERBOXD_RSS_URL": "",
-    "STORYGRAPH_PROFILE_URL": ""
+"vars": {
+  "LETTERBOXD_RSS_URL": "https://letterboxd.com/dogoodsleep/rss/",
+  "STORYGRAPH_PROFILE_URL": "https://app.thestorygraph.com/profile/dogoodsleep"}
   },
   "workers_dev": false,
   "routes": [
