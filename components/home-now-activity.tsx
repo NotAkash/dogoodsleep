@@ -242,7 +242,7 @@ export function HomeNowActivity({ activityApiUrl }: { activityApiUrl: string }) 
               href={watchingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`Watching: ${watchingTitle} (opens in a new tab)`}
+              aria-label={`Recently Watched: ${watchingTitle} (opens in a new tab)`}
             >
               {watchingTitle} <span aria-hidden="true">↗</span>
             </a>
