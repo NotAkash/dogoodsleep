@@ -61,7 +61,9 @@ interactive confirmation:
 ./scripts/sync-placesyfaces.sh --apply /Volumes/LaCie/FinalEdits
 ```
 
-Apply mode uses `rclone copy --ignore-existing`. It uploads a file only when
-its relative path does not already exist in R2; it never replaces or deletes
-an existing R2 object, even when the local file changed or was removed. It
-does not target the `thumbs` bucket.
+Apply mode uses `rclone copy --ignore-existing`, so it never replaces an
+existing object. Before uploading, it compares source and R2 checksums. When
+exactly one new source path matches exactly one old R2-only path, it treats
+that as a move: the R2 object is relocated to the new folder and its old key
+is removed. Ambiguous duplicate matches and ordinary local deletions leave
+their old R2 objects untouched.
