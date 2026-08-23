@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   getGalleryImages,
+  type ArchiveFolder,
   type GalleryImage,
   type GalleryPageRequest,
 } from "@/data/remote-gallery";
@@ -13,6 +14,82 @@ type PlacesFacesGalleryProps = {
 
 const IMAGES_PER_PAGE = 20;
 
+type ArchiveIndexProps = {
+  archiveTotal: number;
+  folders: ArchiveFolder[];
+  loading: boolean;
+  onSelect: (folder: string | null) => void;
+  selectedFolder: string | null;
+};
+
+function ArchiveFolderItems({
+  folders,
+  onSelect,
+  selectedFolder,
+}: Pick<ArchiveIndexProps, "folders" | "onSelect" | "selectedFolder">) {
+  return (
+    <ul className="archive-folder-list">
+      {folders.map((folder) => (
+        <li key={folder.id}>
+          <button
+            type="button"
+            className="archive-folder-button"
+            aria-current={selectedFolder === folder.id ? "page" : undefined}
+            onClick={() => onSelect(folder.id)}
+          >
+            <span>{folder.label}</span>
+            <span className="archive-folder-count" aria-hidden="true">
+              {folder.imageCount}
+            </span>
+          </button>
+          {folder.children.length > 0 ? (
+            <ArchiveFolderItems
+              folders={folder.children}
+              onSelect={onSelect}
+              selectedFolder={selectedFolder}
+            />
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ArchiveIndex({
+  archiveTotal,
+  folders,
+  loading,
+  onSelect,
+  selectedFolder,
+}: ArchiveIndexProps) {
+  return (
+    <nav className="archive-index" aria-label="Archive folders">
+      <button
+        type="button"
+        className="archive-folder-button archive-folder-all"
+        aria-current={selectedFolder === null ? "page" : undefined}
+        onClick={() => onSelect(null)}
+      >
+        <span>All photos</span>
+        <span className="archive-folder-count" aria-hidden="true">
+          {loading && archiveTotal === 0 ? "—" : archiveTotal}
+        </span>
+      </button>
+      {folders.length > 0 ? (
+        <ArchiveFolderItems
+          folders={folders}
+          onSelect={onSelect}
+          selectedFolder={selectedFolder}
+        />
+      ) : (
+        <p className="archive-index-state">
+          {loading ? "Reading folder index…" : "No folders returned."}
+        </p>
+      )}
+    </nav>
+  );
+}
+
 export function PlacesFacesGallery({
   imageApiUrl,
 }: PlacesFacesGalleryProps) {
@@ -22,14 +99,19 @@ export function PlacesFacesGallery({
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [requestedPage, setRequestedPage] =
-    useState<GalleryPageRequest>("last");
+    useState<GalleryPageRequest>(1);
   const [total, setTotal] = useState(0);
+  const [archiveTotal, setArchiveTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [hasPaginationMeta, setHasPaginationMeta] = useState(false);
+  const [folders, setFolders] = useState<ArchiveFolder[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [mobileIndexOpen, setMobileIndexOpen] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const galleryTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const mobileSummaryRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -44,14 +126,19 @@ export function PlacesFacesGallery({
           imageApiUrl,
           requestedPage,
           IMAGES_PER_PAGE,
+          selectedFolder ?? undefined,
         );
 
         if (isMounted) {
-          setImages([...nextPage.images].reverse());
+          setImages(nextPage.images);
           setPage(nextPage.page);
           setTotal(nextPage.total);
           setTotalPages(nextPage.totalPages);
           setHasPaginationMeta(nextPage.hasPaginationMeta);
+          setFolders(nextPage.folders);
+          if (selectedFolder === null) {
+            setArchiveTotal(nextPage.total);
+          }
         }
       } catch (loadError) {
         if (isMounted) {
@@ -73,7 +160,7 @@ export function PlacesFacesGallery({
     return () => {
       isMounted = false;
     };
-  }, [imageApiUrl, requestedPage, loadAttempt]);
+  }, [imageApiUrl, requestedPage, selectedFolder, loadAttempt]);
 
   const isViewerOpen = activeIndex !== null;
 
@@ -213,13 +300,14 @@ export function PlacesFacesGallery({
 
   useEffect(() => {
     setActiveIndex(null);
-  }, [requestedPage]);
+  }, [requestedPage, selectedFolder]);
 
   const activeImage = activeIndex === null ? null : images[activeIndex];
-  const pageStart = total === 0 ? 0 : (page - 1) * IMAGES_PER_PAGE + 1;
-  const pageEnd = total === 0 ? 0 : Math.min(page * IMAGES_PER_PAGE, total);
-  const visiblePageStart =
-    images.length === 0 ? 0 : Math.max(pageStart, pageEnd - images.length + 1);
+  const pageOffset = (page - 1) * IMAGES_PER_PAGE;
+  const visibleFrameHigh = images.length === 0 ? 0 : total - pageOffset;
+  const visibleFrameLow = images.length === 0
+    ? 0
+    : Math.max(1, visibleFrameHigh - images.length + 1);
   const frameDigits = Math.max(3, String(Math.max(total, images.length)).length);
   const loadingFrames = Array.from(
     { length: IMAGES_PER_PAGE },
@@ -230,7 +318,7 @@ export function PlacesFacesGallery({
     String(frameNumber).padStart(frameDigits, "0");
 
   const getFrameNumber = (index: number) =>
-    hasPaginationMeta ? pageEnd - index : images.length - index;
+    hasPaginationMeta ? total - pageOffset - index : images.length - index;
 
   const getFrameLabel = (index: number) => {
     const frameNumber = formatFrameNumber(getFrameNumber(index));
@@ -266,7 +354,23 @@ export function PlacesFacesGallery({
   };
 
   const getImageKey = (image: GalleryImage, index: number) =>
-    `${page}-${image.id}-${index}`;
+    `${selectedFolder ?? "all"}-${page}-${image.id}-${index}`;
+
+  const handleFolderSelect = (folder: string | null) => {
+    if (mobileIndexOpen) {
+      setMobileIndexOpen(false);
+      window.requestAnimationFrame(() => mobileSummaryRef.current?.focus());
+    }
+
+    if (folder === selectedFolder) {
+      return;
+    }
+
+    galleryTriggerRef.current = null;
+    setActiveIndex(null);
+    setSelectedFolder(folder);
+    setRequestedPage(1);
+  };
 
   return (
     <section className="archive-sheet mx-auto w-full max-w-[1680px]" aria-labelledby="archive-title">
@@ -311,7 +415,7 @@ export function PlacesFacesGallery({
                     : images.length === 0
                       ? "0"
                       : hasPaginationMeta
-                        ? `${formatFrameNumber(visiblePageStart)}–${formatFrameNumber(pageEnd)}`
+                        ? `${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)}`
                         : String(images.length)}
                 </dd>
               </div>
@@ -321,7 +425,7 @@ export function PlacesFacesGallery({
                   {loading
                     ? "Reading"
                     : hasPaginationMeta
-                      ? `${total} total`
+                      ? `${total} in set`
                       : `${images.length} loaded`}
                 </dd>
               </div>
@@ -329,6 +433,54 @@ export function PlacesFacesGallery({
           </div>
         </header>
 
+        <div className="archive-mobile-index lg:hidden">
+          <button
+            ref={mobileSummaryRef}
+            type="button"
+            className="archive-mobile-index-toggle"
+            aria-expanded={mobileIndexOpen}
+            aria-controls="archive-mobile-index-panel"
+            onClick={() => setMobileIndexOpen((open) => !open)}
+          >
+            <span>
+              <span className="archive-mobile-index-label">Browse archive</span>
+              <span className="archive-mobile-index-value">
+                {selectedFolder ?? "All photos"}
+              </span>
+            </span>
+            <span className="archive-mobile-index-mark" aria-hidden="true">+</span>
+          </button>
+          {mobileIndexOpen ? (
+            <div id="archive-mobile-index-panel" className="archive-mobile-index-panel">
+              <ArchiveIndex
+                archiveTotal={archiveTotal}
+                folders={folders}
+                loading={loading}
+                onSelect={handleFolderSelect}
+                selectedFolder={selectedFolder}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        <div className="archive-browser">
+          <aside className="archive-desktop-index hidden lg:block" aria-label="Archive index">
+            <div className="archive-index-sticky">
+              <div className="archive-index-heading">
+                <p>Archive index</p>
+                <p>{selectedFolder ? "Filtered set" : "Complete set"}</p>
+              </div>
+              <ArchiveIndex
+                archiveTotal={archiveTotal}
+                folders={folders}
+                loading={loading}
+                onSelect={handleFolderSelect}
+                selectedFolder={selectedFolder}
+              />
+            </div>
+          </aside>
+
+          <div className="archive-content" aria-busy={loading}>
         {error ? (
           <div
             className="archive-state border-y border-[var(--rule)] py-14 sm:py-20"
@@ -380,28 +532,45 @@ export function PlacesFacesGallery({
               Empty set
             </p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[var(--ink)]">
-              No photographs were returned.
+              {selectedFolder
+                ? `No photographs in ${selectedFolder}.`
+                : "No photographs were returned."}
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
-              This archive set is currently empty.
+              {selectedFolder
+                ? "Choose another folder or return to the complete archive."
+                : "This archive set is currently empty."}
             </p>
-            <button
-              type="button"
-              onClick={() => setLoadAttempt((attempt) => attempt + 1)}
-              className="archive-action mt-6 min-h-11 bg-[var(--ink)] px-5 py-3 text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--paper)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)]"
-            >
-              Check again
-            </button>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {selectedFolder ? (
+                <button
+                  type="button"
+                  onClick={() => handleFolderSelect(null)}
+                  className="archive-action min-h-11 bg-[var(--ink)] px-5 py-3 text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--paper)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)]"
+                >
+                  All photos
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+                className="archive-action min-h-11 border border-[var(--ink)] px-5 py-3 text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)]"
+              >
+                Check again
+              </button>
+            </div>
           </div>
         ) : (
           <>
             <div className="archive-register mb-5 flex items-center justify-between gap-4 text-[9px] uppercase tracking-[0.22em] text-[var(--muted)] sm:mb-8 sm:text-[10px]">
               <p>
                 {hasPaginationMeta
-                  ? `${images.length} frames · ${formatFrameNumber(visiblePageStart)}–${formatFrameNumber(pageEnd)}`
+                  ? `${images.length} frames · ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)}`
                   : `${images.length} frames in current set`}
               </p>
-              <p className="hidden sm:block">Select a frame to inspect</p>
+              <p className="hidden sm:block">
+                {selectedFolder ?? "All photos"} · Select a frame to inspect
+              </p>
             </div>
 
             <div
@@ -439,7 +608,7 @@ export function PlacesFacesGallery({
             <footer className="archive-pagination -mx-5 mt-16 flex flex-col gap-7 px-5 py-8 sm:-mx-10 sm:mt-24 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-10 lg:-mx-12 lg:px-12">
               <p className="text-[10px] uppercase tracking-[0.22em] text-[color:rgba(237,240,235,0.5)]">
                 {hasPaginationMeta
-                  ? `Frames ${formatFrameNumber(visiblePageStart)}–${formatFrameNumber(pageEnd)} of ${total}`
+                  ? `Frames ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)} of ${total}`
                   : `${images.length} frames loaded · pagination unavailable`}
               </p>
 
@@ -450,10 +619,10 @@ export function PlacesFacesGallery({
                 <button
                   type="button"
                   onClick={() =>
-                    setRequestedPage(Math.min(totalPages, page + 1))
+                    setRequestedPage(Math.max(1, page - 1))
                   }
                   disabled={
-                    loading || page === totalPages || !hasPaginationMeta
+                    loading || page === 1 || !hasPaginationMeta
                   }
                   className="archive-page-control min-h-11 border border-[color:rgba(237,240,235,0.32)] px-3 py-2 text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--paper)] hover:bg-[var(--paper)] hover:text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-30 sm:px-5"
                 >
@@ -466,8 +635,12 @@ export function PlacesFacesGallery({
                 </span>
                 <button
                   type="button"
-                  onClick={() => setRequestedPage(Math.max(1, page - 1))}
-                  disabled={loading || page === 1 || !hasPaginationMeta}
+                  onClick={() =>
+                    setRequestedPage(Math.min(totalPages, page + 1))
+                  }
+                  disabled={
+                    loading || page === totalPages || !hasPaginationMeta
+                  }
                   className="archive-page-control min-h-11 border border-[color:rgba(237,240,235,0.32)] px-3 py-2 text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--paper)] hover:bg-[var(--paper)] hover:text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-30 sm:px-5"
                 >
                   Older →
@@ -476,6 +649,8 @@ export function PlacesFacesGallery({
             </footer>
           </>
         )}
+          </div>
+        </div>
       </div>
 
       {activeImage ? (

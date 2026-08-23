@@ -374,6 +374,170 @@ button {
   letter-spacing: -0.07em !important;
 }
 
+.archive-browser {
+  min-width: 0;
+}
+
+.archive-content {
+  min-width: 0;
+}
+
+.archive-mobile-index {
+  margin-bottom: 2.5rem;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.archive-mobile-index-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 4.25rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 0;
+  background: transparent;
+  padding: 0.8rem 0;
+  text-align: left;
+}
+
+.archive-mobile-index-label,
+.archive-mobile-index-value {
+  display: block;
+}
+
+.archive-mobile-index-label {
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.archive-mobile-index-value {
+  max-width: 75vw;
+  margin-top: 0.35rem;
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-mobile-index-mark {
+  font-size: 1.35rem;
+  font-weight: 350;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.archive-mobile-index-toggle[aria-expanded="true"] .archive-mobile-index-mark {
+  transform: rotate(45deg);
+}
+
+.archive-mobile-index-panel {
+  max-height: min(58vh, 31rem);
+  overflow-y: auto;
+  border-top: 1px solid var(--rule);
+  padding: 0.75rem 0 1rem;
+  overscroll-behavior: contain;
+}
+
+.archive-index-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--rule-strong);
+  padding: 0.8rem 0 1.1rem;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.archive-index-heading p {
+  margin: 0;
+}
+
+.archive-folder-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.archive-folder-list .archive-folder-list {
+  margin-left: 0.75rem;
+  border-left: 1px solid var(--rule);
+  padding-left: 0.55rem;
+}
+
+.archive-folder-button {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: 2.25rem;
+  cursor: pointer;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  border: 0;
+  background: transparent;
+  padding: 0.48rem 0.45rem 0.48rem 0.6rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: left;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.archive-folder-button:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.archive-folder-button[aria-current="page"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.archive-folder-button[aria-current="page"]::before {
+  position: absolute;
+  top: 50%;
+  left: -0.15rem;
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+  transform: translateY(-50%);
+}
+
+.archive-folder-all {
+  min-height: 2.6rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 0.55rem;
+  font-weight: 600;
+}
+
+.archive-folder-count {
+  font-size: 0.58rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.archive-index-state {
+  margin: 0;
+  padding: 0.9rem 0.6rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
 .archive-grid {
   column-fill: balance;
 }
@@ -394,6 +558,28 @@ button {
 .archive-viewer {
   isolation: isolate;
   color-scheme: dark;
+}
+
+@media (min-width: 1024px) {
+  .archive-browser {
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    gap: clamp(2.5rem, 4vw, 4.75rem);
+    align-items: start;
+  }
+
+  .archive-desktop-index {
+    min-width: 0;
+  }
+
+  .archive-index-sticky {
+    position: sticky;
+    top: 6rem;
+    max-height: calc(100vh - 7.5rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    overscroll-behavior: contain;
+  }
 }
 
 /* Journal content shared by index and entries */
