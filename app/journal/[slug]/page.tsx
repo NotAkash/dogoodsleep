@@ -59,7 +59,7 @@ export default async function JournalEntryPage({
 
         <div className="grid gap-8 py-10 sm:grid-cols-[4rem_minmax(0,44rem)] sm:gap-6 sm:py-14 lg:py-16">
           <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--accent)]">
-            Field note
+            Draft
           </p>
           <article
             className="journal-entry max-w-[44rem]"
@@ -73,7 +73,7 @@ export default async function JournalEntryPage({
             className="inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--muted)] transition-colors hover:text-[var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]"
           >
             <span aria-hidden="true">←</span>
-            All field notes
+            All drafts.
           </Link>
         </footer>
       </div>

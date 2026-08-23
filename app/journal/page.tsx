@@ -10,15 +10,20 @@ export default function JournalPage() {
         <div className="journal-masthead grid gap-6 border-b border-[var(--rule)] pb-10 sm:pb-14 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
           <div>
             <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[var(--accent)]">
-              Journal / {String(entries.length).padStart(2, "0")} notes
+              Journal / {String(entries.length).padStart(2, "0")} entries
             </p>
             <h1 className="mt-5 max-w-4xl font-serif text-4xl leading-[0.98] tracking-[-0.045em] sm:text-6xl lg:text-7xl">
-              Field notes from Places &amp; Faces.
+              Drafts from my journal.
             </h1>
           </div>
           <p className="max-w-md text-sm leading-7 text-[var(--muted)] sm:text-base">
-            On sequence, memory, and the small details that pull a camera back
-            to a place.
+            What did Greg Heffley say? &quot;It&apos;s not a diary, it&apos;s a journal.&quot; This is my journal. It holds
+            It is not a diary. It is not a blog. It is not a newsletter. It is not a social media feed. It is not a publication. It is not a portfolio.
+            It is not a product. It is not a service. It is not a business. It is not a brand. It is not a company. It is not a startup. It is not an agency.
+            It is not an organization. It is not an institution. It is not a school. It is not a university.
+            It is not a college. It is not a program. It is not a course. It is not a class. It is not a workshop.
+            It is not a seminar. It is not a conference. It is not an event. It is not an exhibition.
+            It is not an installation. It is not an artwork. It is not an object.
           </p>
         </div>
 

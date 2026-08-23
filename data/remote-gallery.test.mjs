@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getGalleryImages } from "./remote-gallery.ts";
+import {
+  getGalleryImages,
+  getHomeGalleryPreview,
+} from "./remote-gallery.ts";
 
 test("requests an exact folder and normalizes the nested folder tree", async (context) => {
   let requestedUrl = "";
@@ -56,7 +59,7 @@ test("requests an exact folder and normalizes the nested folder tree", async (co
   });
 });
 
-test("leaves the homepage request unfiltered when no folder is provided", async (context) => {
+test("leaves the newest-first homepage request unfiltered", async (context) => {
   let requestedUrl = "";
   const originalFetch = globalThis.fetch;
 
@@ -69,8 +72,55 @@ test("leaves the homepage request unfiltered when no folder is provided", async 
     return new Response(JSON.stringify({ images: [] }), { status: 200 });
   };
 
-  await getGalleryImages("https://api.example.test", "last", 3);
+  await getGalleryImages("https://api.example.test", 1, 3);
 
   const url = new URL(requestedUrl);
   assert.equal(url.searchParams.has("folder"), false);
+  assert.equal(url.searchParams.get("page"), "1");
+});
+
+test("builds the homepage sampler from two distinct historical frames and the latest frame", async (context) => {
+  const requestedPages = [];
+  const originalFetch = globalThis.fetch;
+
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    const page = Number(url.searchParams.get("page"));
+    requestedPages.push(page);
+
+    return new Response(JSON.stringify({
+      images: [{
+        id: `frame-${6 - page}`,
+        src: `https://images.example/frame-${6 - page}.jpg`,
+        alt: `Frame ${6 - page}`,
+      }],
+      page,
+      total: 5,
+      totalPages: 5,
+      folders: [],
+    }), { status: 200 });
+  };
+
+  const randomValues = [0, 0];
+  const preview = await getHomeGalleryPreview(
+    "https://api.example.test",
+    () => randomValues.shift() ?? 0,
+  );
+
+  assert.deepEqual(requestedPages, [1, 5, 4]);
+  assert.deepEqual(
+    preview.frames.map(({ image, frameNumber }) => ({
+      id: image.id,
+      frameNumber,
+    })),
+    [
+      { id: "frame-5", frameNumber: 5 },
+      { id: "frame-1", frameNumber: 1 },
+      { id: "frame-2", frameNumber: 2 },
+    ],
+  );
 });

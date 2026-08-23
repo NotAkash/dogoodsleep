@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     template: "%s — Do Good Sleep",
   },
   description:
-    "Akash's photography, projects, and field notes from Toronto.",
+    "Akash's photography, projects, and drafts from Toronto.",
 };
 
 export default function RootLayout({

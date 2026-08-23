@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { HomeArchivePreview } from "@/components/home-archive-preview";
+import { getHomeContent } from "@/data/home";
+import { getJournalEntries } from "@/data/journal";
 import { normalizeGalleryBaseUrl } from "@/data/remote-gallery";
 
 export default function HomePage() {
     const imageApiUrl = normalizeGalleryBaseUrl(process.env.IMAGES_API_URL);
+    const homeContent = getHomeContent();
+    const journalEntries = getJournalEntries();
+    const latestDrafts = journalEntries.slice(0, 2);
 
     return (
         <main className="home-page">
@@ -20,39 +25,75 @@ export default function HomePage() {
                             View Places &amp; Faces
                         </Link>
                         <Link className="text-link" href="/journal">
-                            Read the field notes
+                            Read the drafts
                         </Link>
                     </div>
 
-                    <div className="home-index" aria-label="Site index">
-                        <div>
-                            <span>01</span>
-                            <p>Photographs ordered twenty frames at a time.</p>
-                        </div>
-                        <div>
-                            <span>02</span>
-                            <p>Short notes on looking, places, and process.</p>
-                        </div>
+                    <div className="home-index" aria-label="Latest drafts">
+                        {latestDrafts.map((entry, index) => (
+                            <Link
+                                key={entry.slug}
+                                href={`/journal/${entry.slug}`}
+                                aria-label={`${entry.title}: ${entry.summary}`}
+                            >
+                                <span>
+                                    {String(journalEntries.length - index).padStart(2, "0")}
+                                </span>
+                                <p>{entry.summary}</p>
+                            </Link>
+                        ))}
                     </div>
                 </div>
 
                 <HomeArchivePreview imageApiUrl={imageApiUrl} />
             </section>
 
-            <section className="home-note">
-                <p className="eyebrow">From the notebook</p>
-                <blockquote>
-                    “Places &amp; Faces works better when each frame can echo the one before it.”
-                </blockquote>
-                <div>
-                    <p>
-                        From <cite>Building the contact sheet</cite>, a note on giving each
-                        sequence more room to breathe.
-                    </p>
-                    <Link className="text-link" href="/journal/contact-sheets">
-                        Read the entry
-                    </Link>
+            <section className="home-now" aria-labelledby="home-now-title">
+                <div className="home-now-meta">
+                    <p className="eyebrow">{homeContent.rightNowLabel}</p>
+                    {homeContent.updated ? <p>{homeContent.updated}</p> : null}
                 </div>
+                <h2 id="home-now-title">{homeContent.headline}</h2>
+                <dl className="home-now-list">
+                    {homeContent.statusItems.map((item) => (
+                        <div key={item.label}>
+                            <dt>{item.label}</dt>
+                            <dd>{item.value}</dd>
+                        </div>
+                    ))}
+                </dl>
+            </section>
+
+            <section className="home-links" aria-labelledby="home-links-title">
+                <header className="home-links-header">
+                    <p className="eyebrow">{homeContent.linksLabel}</p>
+                    <h2 id="home-links-title">{homeContent.linksHeading}</h2>
+                    <p>{homeContent.linksIntro}</p>
+                </header>
+
+                {homeContent.externalLinks.length > 0 ? (
+                    <ol className="home-links-list">
+                        {homeContent.externalLinks.map((link, index) => (
+                            <li key={link.url}>
+                                <a
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label={`${link.title} (opens in a new tab)`}
+                                >
+                                    <span aria-hidden="true">
+                                        {String(index + 1).padStart(2, "0")}
+                                    </span>
+                                    <strong>{link.title}</strong>
+                                    <span>{link.note}</span>
+                                    <span aria-hidden="true">↗</span>
+                                </a>
+                            </li>
+                        ))}
+                    </ol>
+                ) : (
+                    <p className="home-links-empty">{homeContent.linksEmpty}</p>
+                )}
             </section>
         </main>
     );

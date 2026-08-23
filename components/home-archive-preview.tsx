@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getGalleryImages, type GalleryPage } from "@/data/remote-gallery";
+import {
+  getHomeGalleryPreview,
+  type HomeGalleryPreview,
+} from "@/data/remote-gallery";
 
 type HomeArchivePreviewProps = {
   imageApiUrl: string;
@@ -10,17 +13,40 @@ type HomeArchivePreviewProps = {
 
 type PreviewState =
   | { status: "loading" }
-  | { status: "ready"; page: GalleryPage }
+  | { status: "ready"; preview: HomeGalleryPreview }
   | { status: "error" };
-
-const PREVIEW_LIMIT = 20;
-const PREVIEW_COUNT = 3;
 
 export function HomeArchivePreview({
   imageApiUrl,
 }: HomeArchivePreviewProps) {
   const [requestKey, setRequestKey] = useState(0);
   const [state, setState] = useState<PreviewState>({ status: "loading" });
+  const [portraitImageIds, setPortraitImageIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  function recordImageOrientation(
+    imageId: string,
+    image: HTMLImageElement,
+  ) {
+    const isPortrait = image.naturalHeight > image.naturalWidth;
+
+    setPortraitImageIds((current) => {
+      if (current.has(imageId) === isPortrait) {
+        return current;
+      }
+
+      const next = new Set(current);
+
+      if (isPortrait) {
+        next.add(imageId);
+      } else {
+        next.delete(imageId);
+      }
+
+      return next;
+    });
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -29,14 +55,10 @@ export function HomeArchivePreview({
       setState({ status: "loading" });
 
       try {
-        const page = await getGalleryImages(
-          imageApiUrl,
-          "last",
-          PREVIEW_LIMIT,
-        );
+        const preview = await getHomeGalleryPreview(imageApiUrl);
 
         if (isMounted) {
-          setState({ status: "ready", page });
+          setState({ status: "ready", preview });
         }
       } catch {
         if (isMounted) {
@@ -85,23 +107,19 @@ export function HomeArchivePreview({
     );
   }
 
-  const images = [...state.page.images].reverse().slice(0, PREVIEW_COUNT);
+  const { frames, hasPaginationMeta, total } = state.preview;
 
-  if (images.length === 0) {
+  if (frames.length === 0) {
     return (
       <div className="preview-state preview-state-message">
-        <p className="eyebrow">Latest sequence</p>
+        <p className="eyebrow">Archive sampler</p>
         <p className="preview-state-title">No frames in this set yet.</p>
         <Link className="text-link" href="/journal">
-          Read the field notes
+          Read the drafts
         </Link>
       </div>
     );
   }
-
-  const pageEnd = state.page.hasPaginationMeta
-    ? Math.min(state.page.page * PREVIEW_LIMIT, state.page.total)
-    : images.length;
 
   return (
     <Link
@@ -110,29 +128,36 @@ export function HomeArchivePreview({
       aria-label="View Places & Faces"
     >
       <div className="archive-preview-heading">
-        <span>Latest sequence</span>
+        <span>Archive sampler</span>
         <span>
-          {state.page.hasPaginationMeta
-            ? `${state.page.total} frames`
-            : `${state.page.images.length} frames`}
+          {hasPaginationMeta
+            ? `${total} frames`
+            : `${frames.length} frames`}
         </span>
       </div>
 
       <div className="preview-grid">
-        {images.map((image, index) => (
-          <figure key={`${image.id}-${index}`} className="preview-frame">
+        {frames.map(({ image, frameNumber }, index) => (
+          <figure
+            key={`${image.id}-${index}`}
+            className={`preview-frame${
+              portraitImageIds.has(image.id) ? " preview-frame-portrait" : ""
+            }`}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.src} alt={image.alt} />
+            <img
+              src={image.src}
+              alt={image.alt}
+              onLoad={(event) => {
+                recordImageOrientation(image.id, event.currentTarget);
+              }}
+            />
             <figcaption>
               <span>
-                {state.page.hasPaginationMeta ? "Frame" : "Image"}{" "}
-                {String(
-                  state.page.hasPaginationMeta
-                    ? Math.max(1, pageEnd - index)
-                    : index + 1,
-                ).padStart(state.page.hasPaginationMeta ? 3 : 2, "0")}
+                {hasPaginationMeta ? "Frame" : "Image"}{" "}
+                {String(frameNumber).padStart(hasPaginationMeta ? 3 : 2, "0")}
               </span>
-              <span>{index === 0 ? "Recent" : "Places & Faces"}</span>
+              <span>{frameNumber === total ? "Latest" : "Places & Faces"}</span>
             </figcaption>
           </figure>
         ))}

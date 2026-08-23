@@ -22,6 +22,17 @@ export type GalleryPage = {
 
 export type GalleryPageRequest = number | "last";
 
+export type HomePreviewFrame = {
+  image: GalleryImage;
+  frameNumber: number;
+};
+
+export type HomeGalleryPreview = {
+  frames: HomePreviewFrame[];
+  total: number;
+  hasPaginationMeta: boolean;
+};
+
 type ImagesResponse = {
   images?: Array<Partial<GalleryImage> & { src?: string; alt?: string }>;
   page?: number;
@@ -117,6 +128,76 @@ export async function getGalleryImages(
     totalPages: data.totalPages ?? 1,
     hasPaginationMeta,
     folders: normalizeFolders(data.folders),
+  };
+}
+
+function sampleFrameNumbers(
+  maximumFrame: number,
+  count: number,
+  random: () => number,
+): number[] {
+  const available = Array.from(
+    { length: Math.max(0, maximumFrame) },
+    (_, index) => index + 1,
+  );
+  const selected: number[] = [];
+
+  while (selected.length < count && available.length > 0) {
+    const randomIndex = Math.min(
+      available.length - 1,
+      Math.floor(Math.max(0, random()) * available.length),
+    );
+    selected.push(available.splice(randomIndex, 1)[0]);
+  }
+
+  return selected;
+}
+
+export async function getHomeGalleryPreview(
+  baseUrl: string,
+  random: () => number = Math.random,
+): Promise<HomeGalleryPreview> {
+  const latestPage = await getGalleryImages(baseUrl, 1, 1);
+  const latestImage = latestPage.images[0];
+
+  if (!latestImage) {
+    return {
+      frames: [],
+      total: latestPage.total,
+      hasPaginationMeta: latestPage.hasPaginationMeta,
+    };
+  }
+
+  if (!latestPage.hasPaginationMeta) {
+    return {
+      frames: [{ image: latestImage, frameNumber: 1 }],
+      total: 1,
+      hasPaginationMeta: false,
+    };
+  }
+
+  const total = latestPage.total;
+  const randomFrameNumbers = sampleFrameNumbers(total - 1, 2, random);
+  const randomPages = await Promise.all(
+    randomFrameNumbers.map((frameNumber) => (
+      getGalleryImages(baseUrl, total - frameNumber + 1, 1)
+    )),
+  );
+  const randomFrames = randomPages.flatMap((page, index) => {
+    const image = page.images[0];
+
+    return image
+      ? [{ image, frameNumber: randomFrameNumbers[index] }]
+      : [];
+  });
+
+  return {
+    frames: [
+      { image: latestImage, frameNumber: total },
+      ...randomFrames,
+    ],
+    total,
+    hasPaginationMeta: true,
   };
 }
 

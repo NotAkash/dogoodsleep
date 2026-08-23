@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "test:home": "node --test data/home.test.mjs",
     "images-worker:dev": "wrangler dev --config worker/wrangler.jsonc",
     "images-worker:deploy": "wrangler deploy --config worker/wrangler.jsonc",
     "test:archive": "node --test data/remote-gallery.test.mjs",
