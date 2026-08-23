@@ -242,6 +242,28 @@ button {
 }
 
 @media (min-width: 561px) {
+  .preview-grid-portrait-support {
+    grid-template-columns: minmax(0, 1.5fr) minmax(8rem, 0.5fr);
+  }
+
+  .preview-grid-portrait-support .preview-frame:first-child {
+    align-self: center;
+  }
+
+  .preview-grid-support-balanced .preview-frame:not(:first-child) {
+    max-width: 100%;
+    justify-self: center;
+  }
+
+  .preview-grid-support-balanced .preview-frame:not(:first-child) img {
+    width: 100%;
+    max-height: none;
+  }
+
+  .preview-grid-support-balanced .preview-frame:nth-child(3) {
+    align-self: end;
+  }
+
   .preview-frame-portrait {
     width: fit-content;
     max-width: 100%;

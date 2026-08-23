@@ -4,6 +4,10 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-23",
   "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "LETTERBOXD_RSS_URL": "",
+    "STORYGRAPH_PROFILE_URL": ""
+  },
   "workers_dev": false,
   "routes": [
     {

@@ -1,5 +1,9 @@
 const SITE_ORIGIN = "https://dogoodsleep.com";
 const IMAGES_ORIGIN = "https://images.dogoodsleep.com";
+const LETTERBOXD_ORIGIN = "https://letterboxd.com";
+const STORYGRAPH_ORIGIN = "https://app.thestorygraph.com";
+const ACTIVITY_CACHE_TTL_SECONDS = 30 * 60;
+const MAX_RSS_BYTES = 512 * 1024;
 
 type GalleryImage = {
   id: string;
@@ -21,13 +25,230 @@ type MutableArchiveFolder = ArchiveFolder & {
 function json(data: unknown, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
   headers.set("access-control-allow-origin", SITE_ORIGIN);
-  headers.set("cache-control", "no-store, max-age=0");
+  if (!headers.has("cache-control")) {
+    headers.set("cache-control", "no-store, max-age=0");
+  }
   headers.set("content-type", "application/json; charset=utf-8");
 
   return new Response(JSON.stringify(data), {
     ...init,
     headers,
   });
+}
+
+type LatestActivity = {
+  reading: {
+    profileUrl: string;
+  };
+  watching: {
+    profileUrl: string;
+    title?: string;
+    url?: string;
+  };
+};
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function configuredUrl(value: string, fallback: string): string {
+  const candidate = value.trim();
+  return isHttpsUrl(candidate) ? candidate : fallback;
+}
+
+function letterboxdProfileUrl(rssUrl: string): string {
+  try {
+    const url = new URL(rssUrl);
+    const [username, feed] = url.pathname.split("/").filter(Boolean);
+
+    if (
+      (url.hostname === "letterboxd.com" || url.hostname === "www.letterboxd.com")
+      && username
+      && feed === "rss"
+    ) {
+      return new URL(`/${encodeURIComponent(username)}/`, LETTERBOXD_ORIGIN).toString();
+    }
+  } catch {
+    // Fall through to the generic public profile page.
+  }
+
+  return `${LETTERBOXD_ORIGIN}/`;
+}
+
+function rssItemValue(item: string, tagName: string): string | undefined {
+  const expression = new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i");
+  const match = item.match(expression);
+
+  if (!match) {
+    return undefined;
+  }
+
+  return decodeXml(match[1]).trim() || undefined;
+}
+
+function decodeXml(value: string): string {
+  return value
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hexadecimal: string) => {
+      const codePoint = Number.parseInt(hexadecimal, 16);
+      return isUnicodeCodePoint(codePoint) ? String.fromCodePoint(codePoint) : "";
+    })
+    .replace(/&#(\d+);/g, (_, decimal: string) => {
+      const codePoint = Number.parseInt(decimal, 10);
+      return isUnicodeCodePoint(codePoint) ? String.fromCodePoint(codePoint) : "";
+    })
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;|&#039;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&amp;/gi, "&")
+    .replace(/<[^>]+>/g, "");
+}
+
+function isUnicodeCodePoint(value: number): boolean {
+  return Number.isInteger(value)
+    && value >= 0
+    && value <= 0x10FFFF
+    && (value < 0xD800 || value > 0xDFFF);
+}
+
+function isLetterboxdUrl(value: string | undefined): value is string {
+  if (!value || !isHttpsUrl(value)) {
+    return false;
+  }
+
+  const url = new URL(value);
+  return url.hostname === "letterboxd.com" || url.hostname === "www.letterboxd.com";
+}
+
+async function readTextAtMost(response: Response, maximumBytes: number): Promise<string> {
+  const declaredLength = Number(response.headers.get("content-length"));
+
+  if (Number.isFinite(declaredLength) && declaredLength > maximumBytes) {
+    throw new Error("Letterboxd RSS response exceeded the maximum size");
+  }
+
+  if (!response.body) {
+    return "";
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const chunks: string[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maximumBytes) {
+        await reader.cancel();
+        throw new Error("Letterboxd RSS response exceeded the maximum size");
+      }
+
+      chunks.push(decoder.decode(value, { stream: true }));
+    }
+
+    chunks.push(decoder.decode());
+    return chunks.join("");
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function latestDiaryEntry(rss: string): { title: string; url: string } | undefined {
+  const item = rss.match(/<item\b[^>]*>([\s\S]*?)<\/item>/i)?.[1];
+  if (!item) {
+    return undefined;
+  }
+
+  const title = rssItemValue(item, "letterboxd:filmTitle") ?? rssItemValue(item, "title");
+  const url = rssItemValue(item, "link");
+
+  return title && isLetterboxdUrl(url) ? { title, url } : undefined;
+}
+
+async function latestActivity(env: Env): Promise<LatestActivity> {
+  const rssUrl = env.LETTERBOXD_RSS_URL.trim();
+  const fallback: LatestActivity = {
+    reading: {
+      profileUrl: configuredUrl(env.STORYGRAPH_PROFILE_URL, `${STORYGRAPH_ORIGIN}/`),
+    },
+    watching: {
+      profileUrl: letterboxdProfileUrl(rssUrl),
+    },
+  };
+
+  if (!isLetterboxdUrl(rssUrl) || !new URL(rssUrl).pathname.endsWith("/rss/")) {
+    return fallback;
+  }
+
+  const response = await fetch(rssUrl, {
+    headers: { accept: "application/rss+xml, application/xml;q=0.9, text/xml;q=0.8" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Letterboxd RSS request failed: ${response.status}`);
+  }
+
+  const entry = latestDiaryEntry(await readTextAtMost(response, MAX_RSS_BYTES));
+  return entry ? { ...fallback, watching: { ...fallback.watching, ...entry } } : fallback;
+}
+
+async function handleActivity(request: Request, env: Env): Promise<Response> {
+  const cache = typeof caches === "undefined" ? undefined : caches.default;
+  const cacheKey = new Request(`${new URL(request.url).origin}/activity`);
+
+  if (cache) {
+    const cached = await cache.match(cacheKey);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  let activity: LatestActivity;
+  try {
+    activity = await latestActivity(env);
+  } catch (error) {
+    console.error(JSON.stringify({
+      message: "Letterboxd activity request failed",
+      error: error instanceof Error ? error.message : String(error),
+    }));
+    activity = {
+      reading: {
+        profileUrl: configuredUrl(env.STORYGRAPH_PROFILE_URL, `${STORYGRAPH_ORIGIN}/`),
+      },
+      watching: {
+        profileUrl: letterboxdProfileUrl(env.LETTERBOXD_RSS_URL),
+      },
+    };
+  }
+
+  const response = json(activity, {
+    headers: { "cache-control": `public, max-age=${ACTIVITY_CACHE_TTL_SECONDS}` },
+  });
+
+  if (cache) {
+    try {
+      await cache.put(cacheKey, response.clone());
+    } catch (error) {
+      console.warn(JSON.stringify({
+        message: "Unable to cache Letterboxd activity",
+        error: error instanceof Error ? error.message : String(error),
+      }));
+    }
+  }
+
+  return response;
 }
 
 function toAlt(key: string): string {
@@ -249,6 +470,10 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
   if (url.pathname === "/health") {
     return json({ ok: true });
+  }
+
+  if (url.pathname === "/activity") {
+    return handleActivity(request, env);
   }
 
   if (url.pathname !== "/images") {

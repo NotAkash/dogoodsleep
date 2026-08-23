@@ -48,6 +48,18 @@ async function request(path, listedObjects = objects) {
   return { response, body: await response.json(), listCalls };
 }
 
+async function activityRequest(env, feedResponse) {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () => feedResponse;
+  try {
+    const response = await worker.fetch(new Request("https://api.example.test/activity"), env);
+    return { response, body: await response.json() };
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
 test("returns every nested folder with descendant-inclusive image counts", async () => {
   const { response, body, listCalls } = await request("/images?limit=48");
 
@@ -264,5 +276,66 @@ test("unknown and malformed folder paths fail without returning images", async (
     const invalid = await request(path);
     assert.equal(invalid.response.status, 400);
     assert.deepEqual(invalid.body, { error: "Invalid folder path" });
+  }
+});
+
+test("returns the latest Letterboxd diary item with a cacheable response", async () => {
+  const rss = `<?xml version="1.0"?>
+    <rss><channel><item>
+      <title>Reality Bites, 1994 - ★★</title>
+      <link>https://letterboxd.com/akash/film/reality-bites/</link>
+      <letterboxd:filmTitle>Reality Bites</letterboxd:filmTitle>
+    </item></channel></rss>`;
+  const { response, body } = await activityRequest({
+    STORYGRAPH_PROFILE_URL: "https://app.thestorygraph.com/profile/akash",
+    LETTERBOXD_RSS_URL: "https://letterboxd.com/akash/rss/",
+  }, new Response(rss, { headers: { "content-type": "application/rss+xml" } }));
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "public, max-age=1800");
+  assert.equal(response.headers.get("access-control-allow-origin"), "https://dogoodsleep.com");
+  assert.deepEqual(body, {
+    reading: { profileUrl: "https://app.thestorygraph.com/profile/akash" },
+    watching: {
+      profileUrl: "https://letterboxd.com/akash/",
+      title: "Reality Bites",
+      url: "https://letterboxd.com/akash/film/reality-bites/",
+    },
+  });
+});
+
+test("falls back to configured profiles when Letterboxd has no usable diary item", async () => {
+  const { response, body } = await activityRequest({
+    STORYGRAPH_PROFILE_URL: "https://app.thestorygraph.com/profile/akash",
+    LETTERBOXD_RSS_URL: "https://letterboxd.com/akash/rss/",
+  }, new Response("<rss><channel /></rss>"));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(body, {
+    reading: { profileUrl: "https://app.thestorygraph.com/profile/akash" },
+    watching: { profileUrl: "https://letterboxd.com/akash/" },
+  });
+});
+
+test("does not make a request when no Letterboxd feed is configured", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error("The missing RSS feed should not be fetched");
+  };
+
+  try {
+    const response = await worker.fetch(new Request("https://api.example.test/activity"), {
+      STORYGRAPH_PROFILE_URL: "https://app.thestorygraph.com/profile/akash",
+      LETTERBOXD_RSS_URL: "",
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(body, {
+      reading: { profileUrl: "https://app.thestorygraph.com/profile/akash" },
+      watching: { profileUrl: "https://letterboxd.com/" },
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });

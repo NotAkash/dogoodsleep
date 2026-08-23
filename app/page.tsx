@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HomeArchivePreview } from "@/components/home-archive-preview";
+import { HomeNowActivity } from "@/components/home-now-activity";
 import { getHomeContent } from "@/data/home";
 import { getJournalEntries } from "@/data/journal";
 import { normalizeGalleryBaseUrl } from "@/data/remote-gallery";
@@ -55,6 +56,12 @@ export default function HomePage() {
                 </div>
                 <h2 id="home-now-title">{homeContent.headline}</h2>
                 <dl className="home-now-list">
+                    <HomeNowActivity
+                        activityApiUrl={
+                            process.env.NEXT_PUBLIC_ACTIVITY_API_URL
+                            ?? "https://api.dogoodsleep.com"
+                        }
+                    />
                     {homeContent.statusItems.map((item) => (
                         <div key={item.label}>
                             <dt>{item.label}</dt>

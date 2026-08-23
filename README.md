@@ -22,6 +22,25 @@ npm run dev
 - Journal entries live in `content/journal/*.md` with simple frontmatter: `title`, `date`, and `summary`.
 - The app is intentionally kept small so you can build features back up from a clean base.
 
+## Live "Right now" activity
+
+The homepage always links Reading to `STORYGRAPH_PROFILE_URL` and shows the latest
+Letterboxd diary item when `LETTERBOXD_RSS_URL` is configured. Both are public,
+non-secret Worker variables in `worker/wrangler.jsonc`:
+
+```json
+{
+  "LETTERBOXD_RSS_URL": "https://letterboxd.com/dogoodsleep/rss/",
+  "STORYGRAPH_PROFILE_URL": "https://app.thestorygraph.com/profile/dogoodsleep"
+}
+```
+
+Replace the empty defaults before deploying the image Worker. The endpoint caches
+the normalized activity for 30 minutes and falls back to the respective public
+profile when the Letterboxd feed is unavailable or empty. Set
+`NEXT_PUBLIC_ACTIVITY_API_URL` only when a preview uses an activity Worker at a
+different origin; production defaults to `https://api.dogoodsleep.com`.
+
 ## Creating web-sized JPEG copies
 
 On macOS, `create_medium_copies.py` moves JPEGs larger than 7 MiB into a

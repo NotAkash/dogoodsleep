@@ -10,7 +10,6 @@ links_empty: "Nothing pinned right now."
 
 ## Current
 
-- Reading — Adventures of Huckleberry Finn
 - Thinking About — Getting a tattoo
 - Building — https://transit-tracker.dogoodsleep.com/
 
