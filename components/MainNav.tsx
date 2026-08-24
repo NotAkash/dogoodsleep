@@ -24,7 +24,7 @@ export function MainNav() {
                     aria-current={pathname === "/" ? "page" : undefined}
                     className="shrink-0 text-[13px] font-semibold uppercase tracking-[0.16em] text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)] sm:text-sm sm:tracking-[0.2em]"
                 >
-                    Do Good Sleep
+                    Home
                 </Link>
 
                 <div className="flex items-center gap-4 sm:gap-7">

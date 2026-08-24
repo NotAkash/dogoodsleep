@@ -15,11 +15,10 @@ export default function HomePage() {
         <main className="home-page">
             <section className="home-hero">
                 <div className="home-intro">
-                    <p className="eyebrow">Akash · Toronto · Portfolio & Projects</p>
+                    <p className="eyebrow">Akash · Toronto · Places & Faces</p>
                     <h1>Do Good Sleep</h1>
                     <p className="home-deck">
-                        Streets, rooms, passing faces, and late light—held in sequence
-                        instead of left to disappear into a camera roll.
+                        You feel good, and then you fall asleep.
                     </p>
                     <div className="home-actions">
                         <Link className="primary-link" href="/places-faces">
