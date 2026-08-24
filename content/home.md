@@ -20,3 +20,4 @@ links_empty: "Nothing pinned right now."
 -->
 - [If you let AI do your writing, I will come to your house and kill you](https://samkriss.substack.com/p/if-you-let-ai-do-your-writing-i-will?utm_source=profile&utm_medium=reader2) -- 10/10 no notes.
 - [youarelistening.to](https://youarelistening.to/) -- Ambient music with city sounds.
+- [David Foster Wallace discusses Popular Entertainment (2003)](https://youtu.be/DoAME7gPBaw?si=4tV-RFyiFxbZ7Y66) -- What is it that literature can do that other mediums can't? Why do so many of us find reading boring, slow and lonwly? "When the implicit purpose of your life becomes satisfying your own impulses and desires continuously, some other part of you reacts against that, which may be why silence and solitude have become so uncomfortable"
