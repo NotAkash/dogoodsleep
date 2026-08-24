@@ -279,12 +279,32 @@ test("unknown and malformed folder paths fail without returning images", async (
   }
 });
 
-test("returns the latest Letterboxd diary item with a cacheable response", async () => {
+test("returns the latest three Letterboxd diary items with a cacheable response", async () => {
   const rss = `<?xml version="1.0"?>
     <rss><channel><item>
       <title>Reality Bites, 1994 - ★★</title>
       <link>https://letterboxd.com/akash/film/reality-bites/</link>
       <letterboxd:filmTitle>Reality Bites</letterboxd:filmTitle>
+      <letterboxd:filmYear>1994</letterboxd:filmYear>
+      <letterboxd:memberRating>2.0</letterboxd:memberRating>
+      <description><![CDATA[<p><img src="https://a.ltrbxd.com/resized/film-poster/reality-bites.jpg" /></p>]]></description>
+    </item><item>
+      <title>Paris, Texas, 1984 - ★★★★½</title>
+      <link>https://letterboxd.com/akash/film/paris-texas/</link>
+      <letterboxd:filmTitle>Paris, Texas</letterboxd:filmTitle>
+      <letterboxd:filmYear>1984</letterboxd:filmYear>
+      <letterboxd:memberRating>4.5</letterboxd:memberRating>
+    </item><item>
+      <title>Chungking Express, 1994 - ★★★★★</title>
+      <link>https://letterboxd.com/akash/film/chungking-express/</link>
+      <letterboxd:filmTitle>Chungking Express</letterboxd:filmTitle>
+      <letterboxd:filmYear>1994</letterboxd:filmYear>
+      <letterboxd:memberRating>5.0</letterboxd:memberRating>
+      <description><![CDATA[<p><img src="https://a.ltrbxd.com/resized/film-poster/chungking-express.jpg" /></p>]]></description>
+    </item><item>
+      <title>Ignored fourth film, 2000 - ★</title>
+      <link>https://letterboxd.com/akash/film/ignored-fourth-film/</link>
+      <letterboxd:filmTitle>Ignored fourth film</letterboxd:filmTitle>
     </item></channel></rss>`;
   const { response, body } = await activityRequest({
     STORYGRAPH_PROFILE_URL: "https://app.thestorygraph.com/profile/akash",
@@ -300,7 +320,58 @@ test("returns the latest Letterboxd diary item with a cacheable response", async
       profileUrl: "https://letterboxd.com/akash/",
       title: "Reality Bites",
       url: "https://letterboxd.com/akash/film/reality-bites/",
+      entries: [
+        {
+          title: "Reality Bites",
+          url: "https://letterboxd.com/akash/film/reality-bites/",
+          year: "1994",
+          rating: 2,
+          posterUrl: "https://a.ltrbxd.com/resized/film-poster/reality-bites.jpg",
+        },
+        {
+          title: "Paris, Texas",
+          url: "https://letterboxd.com/akash/film/paris-texas/",
+          year: "1984",
+          rating: 4.5,
+        },
+        {
+          title: "Chungking Express",
+          url: "https://letterboxd.com/akash/film/chungking-express/",
+          year: "1994",
+          rating: 5,
+          posterUrl: "https://a.ltrbxd.com/resized/film-poster/chungking-express.jpg",
+        },
+      ],
     },
+  });
+});
+
+test("skips incomplete diary items and omits unsafe optional RSS values", async () => {
+  const rss = `<rss><channel><item>
+      <title>Broken item</title>
+      <link>https://example.com/not-a-letterboxd-entry</link>
+    </item><item>
+      <title>Only valid item</title>
+      <link>https://letterboxd.com/akash/film/only-valid-item/</link>
+      <letterboxd:filmYear>not a year</letterboxd:filmYear>
+      <letterboxd:memberRating>9</letterboxd:memberRating>
+      <description><![CDATA[<img src="https://example.com/untrusted-poster.jpg" />]]></description>
+    </item></channel></rss>`;
+  const { body } = await activityRequest({
+    STORYGRAPH_PROFILE_URL: "https://app.thestorygraph.com/profile/akash",
+    LETTERBOXD_RSS_URL: "https://letterboxd.com/akash/rss/",
+  }, new Response(rss));
+
+  assert.deepEqual(body.watching, {
+    profileUrl: "https://letterboxd.com/akash/",
+    title: "Only valid item",
+    url: "https://letterboxd.com/akash/film/only-valid-item/",
+    entries: [
+      {
+        title: "Only valid item",
+        url: "https://letterboxd.com/akash/film/only-valid-item/",
+      },
+    ],
   });
 });
 
