@@ -70,10 +70,12 @@ function parseDocument(source: string): {
   };
 }
 
-function getSection(content: string, heading: string): string {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function getSection(content: string, headings: string | string[]): string {
+  const escapedHeadings = (Array.isArray(headings) ? headings : [headings])
+    .map((heading) => heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
   const match = content.match(
-    new RegExp(`(?:^|\\n)##\\s+${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n##\\s+|$)`, "i"),
+    new RegExp(`(?:^|\\n)##\\s+(?:${escapedHeadings})\\s*\\n([\\s\\S]*?)(?=\\n##\\s+|$)`, "i"),
   );
 
   return match?.[1].trim() ?? "";
@@ -149,7 +151,9 @@ export function parseHomeContent(source: string): HomeContent {
     linksHeading: metadata.links_heading ?? "Worth a detour.",
     linksIntro: metadata.links_intro ?? "",
     linksEmpty: metadata.links_empty ?? "Nothing pinned right now.",
-    externalLinks: parseExternalLinks(getSection(content, "Elsewhere")),
+    externalLinks: parseExternalLinks(
+      getSection(content, ["Elsewhere", "Elsewhere On The Internet"]),
+    ),
   };
 }
 

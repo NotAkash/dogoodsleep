@@ -20,7 +20,7 @@ links_empty: "Nothing pinned."
 - Following — Leeds United
 - Using -- https://transit-tracker.dogoodsleep.com/
 
-## Elsewhere
+## Elsewhere On The Internet
 
 - [A real post](https://example.org/post) -- Why it is worth reading
 
