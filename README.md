@@ -24,9 +24,9 @@ npm run dev
 
 ## Live "Right now" activity
 
-The homepage always links Reading to `STORYGRAPH_PROFILE_URL` and shows the latest
-Letterboxd diary item when `LETTERBOXD_RSS_URL` is configured. Both are public,
-non-secret Worker variables in `worker/wrangler.jsonc`:
+The homepage always links Reading to `STORYGRAPH_PROFILE_URL` and shows the three
+latest Letterboxd diary entries when `LETTERBOXD_RSS_URL` is configured. Both are
+public, non-secret Worker variables in `worker/wrangler.jsonc`:
 
 ```json
 {
