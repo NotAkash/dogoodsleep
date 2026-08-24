@@ -3,6 +3,7 @@ const IMAGES_ORIGIN = "https://images.dogoodsleep.com";
 const LETTERBOXD_ORIGIN = "https://letterboxd.com";
 const STORYGRAPH_ORIGIN = "https://app.thestorygraph.com";
 const ACTIVITY_CACHE_TTL_SECONDS = 30 * 60;
+const ACTIVITY_CACHE_VERSION = "2";
 const MAX_RSS_BYTES = 512 * 1024;
 
 type GalleryImage = {
@@ -36,6 +37,14 @@ function json(data: unknown, init: ResponseInit = {}): Response {
   });
 }
 
+type DiaryEntry = {
+  title: string;
+  url: string;
+  year?: string;
+  rating?: number;
+  posterUrl?: string;
+};
+
 type LatestActivity = {
   reading: {
     profileUrl: string;
@@ -44,6 +53,7 @@ type LatestActivity = {
     profileUrl: string;
     title?: string;
     url?: string;
+    entries?: DiaryEntry[];
   };
 };
 
@@ -79,18 +89,24 @@ function letterboxdProfileUrl(rssUrl: string): string {
   return `${LETTERBOXD_ORIGIN}/`;
 }
 
-function rssItemValue(item: string, tagName: string): string | undefined {
+function rssItemRawValue(item: string, tagName: string): string | undefined {
   const expression = new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i");
   const match = item.match(expression);
 
-  if (!match) {
-    return undefined;
-  }
+  return match?.[1].trim() || undefined;
+}
 
-  return decodeXml(match[1]).trim() || undefined;
+function rssItemValue(item: string, tagName: string): string | undefined {
+  const value = rssItemRawValue(item, tagName);
+  return value ? decodeXml(value).trim() || undefined : undefined;
 }
 
 function decodeXml(value: string): string {
+  return decodeXmlEntities(value)
+    .replace(/<[^>]+>/g, "");
+}
+
+function decodeXmlEntities(value: string): string {
   return value
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/&#x([0-9a-f]+);/gi, (_, hexadecimal: string) => {
@@ -105,8 +121,7 @@ function decodeXml(value: string): string {
     .replace(/&apos;|&#039;/gi, "'")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
-    .replace(/&amp;/gi, "&")
-    .replace(/<[^>]+>/g, "");
+    .replace(/&amp;/gi, "&");
 }
 
 function isUnicodeCodePoint(value: number): boolean {
@@ -123,6 +138,15 @@ function isLetterboxdUrl(value: string | undefined): value is string {
 
   const url = new URL(value);
   return url.hostname === "letterboxd.com" || url.hostname === "www.letterboxd.com";
+}
+
+function isLetterboxdPosterUrl(value: string | undefined): value is string {
+  if (!value || !isHttpsUrl(value)) {
+    return false;
+  }
+
+  const url = new URL(value);
+  return url.hostname === "a.ltrbxd.com" && url.pathname.startsWith("/resized/");
 }
 
 async function readTextAtMost(response: Response, maximumBytes: number): Promise<string> {
@@ -165,16 +189,47 @@ async function readTextAtMost(response: Response, maximumBytes: number): Promise
   }
 }
 
-function latestDiaryEntry(rss: string): { title: string; url: string } | undefined {
-  const item = rss.match(/<item\b[^>]*>([\s\S]*?)<\/item>/i)?.[1];
-  if (!item) {
-    return undefined;
-  }
-
+function diaryEntry(item: string): DiaryEntry | undefined {
   const title = rssItemValue(item, "letterboxd:filmTitle") ?? rssItemValue(item, "title");
   const url = rssItemValue(item, "link");
 
-  return title && isLetterboxdUrl(url) ? { title, url } : undefined;
+  if (!title || !isLetterboxdUrl(url)) {
+    return undefined;
+  }
+
+  const year = rssItemValue(item, "letterboxd:filmYear");
+  const ratingValue = rssItemValue(item, "letterboxd:memberRating");
+  const rating = ratingValue === undefined ? undefined : Number(ratingValue);
+  const description = rssItemRawValue(item, "description");
+  const posterValue = description?.match(/<img\b[^>]*\bsrc\s*=\s*(["'])([\s\S]*?)\1/i)?.[2];
+  const posterUrl = posterValue ? decodeXmlEntities(posterValue).trim() : undefined;
+
+  return {
+    title,
+    url,
+    ...(year && /^\d{4}$/.test(year) ? { year } : {}),
+    ...(rating !== undefined && Number.isFinite(rating) && rating >= 0 && rating <= 5
+      ? { rating }
+      : {}),
+    ...(isLetterboxdPosterUrl(posterUrl) ? { posterUrl } : {}),
+  };
+}
+
+function latestDiaryEntries(rss: string): DiaryEntry[] {
+  const entries: DiaryEntry[] = [];
+
+  for (const match of rss.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)) {
+    const entry = diaryEntry(match[1]);
+    if (entry) {
+      entries.push(entry);
+    }
+
+    if (entries.length === 3) {
+      break;
+    }
+  }
+
+  return entries;
 }
 
 async function latestActivity(env: Env): Promise<LatestActivity> {
@@ -200,13 +255,27 @@ async function latestActivity(env: Env): Promise<LatestActivity> {
     throw new Error(`Letterboxd RSS request failed: ${response.status}`);
   }
 
-  const entry = latestDiaryEntry(await readTextAtMost(response, MAX_RSS_BYTES));
-  return entry ? { ...fallback, watching: { ...fallback.watching, ...entry } } : fallback;
+  const entries = latestDiaryEntries(await readTextAtMost(response, MAX_RSS_BYTES));
+  const latest = entries[0];
+
+  return latest
+    ? {
+        ...fallback,
+        watching: {
+          ...fallback.watching,
+          title: latest.title,
+          url: latest.url,
+          entries,
+        },
+      }
+    : fallback;
 }
 
 async function handleActivity(request: Request, env: Env): Promise<Response> {
   const cache = typeof caches === "undefined" ? undefined : caches.default;
-  const cacheKey = new Request(`${new URL(request.url).origin}/activity`);
+  const cacheKey = new Request(
+    `${new URL(request.url).origin}/activity?cache-version=${ACTIVITY_CACHE_VERSION}`,
+  );
 
   if (cache) {
     const cached = await cache.match(cacheKey);

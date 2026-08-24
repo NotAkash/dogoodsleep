@@ -429,6 +429,80 @@ button {
   padding-bottom: 0.15rem;
 }
 
+.home-now-watching dd {
+  min-width: 0;
+}
+
+.letterboxd-entries {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.letterboxd-entries li {
+  min-width: 0;
+}
+
+.home-now-list dd .letterboxd-card {
+  display: block;
+  border-bottom: 0;
+  overflow-wrap: normal;
+  padding-bottom: 0;
+}
+
+.letterboxd-card-poster {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: rgba(237, 240, 235, 0.1);
+  object-fit: cover;
+  transition: opacity 160ms ease;
+}
+
+.letterboxd-card-poster--missing {
+  border: 1px solid rgba(237, 240, 235, 0.2);
+}
+
+.letterboxd-card-title,
+.letterboxd-card-meta {
+  display: block;
+}
+
+.letterboxd-card-title {
+  display: -webkit-box;
+  margin-top: 0.55rem;
+  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 540;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.letterboxd-card-meta {
+  margin-top: 0.2rem;
+  color: rgba(237, 240, 235, 0.5);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+}
+
+@media (hover: hover) {
+  .letterboxd-card:hover .letterboxd-card-poster {
+    opacity: 0.72;
+  }
+
+  .letterboxd-card:hover .letterboxd-card-title {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.24em;
+  }
+}
+
 .home-links {
   max-width: 1720px;
   margin: 0 auto;
@@ -901,6 +975,14 @@ button {
   .home-now-list > div {
     gap: 0.75rem;
     grid-template-columns: 4.75rem minmax(0, 1fr);
+  }
+
+  .home-now-list > .home-now-watching {
+    grid-template-columns: 1fr;
+  }
+
+  .letterboxd-entries {
+    gap: 0.6rem;
   }
 }
 
