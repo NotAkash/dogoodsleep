@@ -4,6 +4,12 @@ export type GalleryImage = {
   alt: string;
 };
 
+export type GalleryImageLocation = {
+  folderSegments: string[];
+  filename: string;
+  label: string;
+};
+
 export type ArchiveFolder = {
   id: string;
   label: string;
@@ -21,6 +27,27 @@ export type GalleryPage = {
 };
 
 export type GalleryPageRequest = number | "last";
+
+export function getGalleryImageLocation(key: string): GalleryImageLocation {
+  const segments = key.split("/");
+  const filename = segments.pop() ?? key;
+
+  if (segments.length === 0) {
+    const basename = filename.replace(/\.[^.]+$/, "");
+
+    return {
+      folderSegments: [],
+      filename: basename,
+      label: basename,
+    };
+  }
+
+  return {
+    folderSegments: segments,
+    filename,
+    label: key,
+  };
+}
 
 export type HomePreviewFrame = {
   image: GalleryImage;

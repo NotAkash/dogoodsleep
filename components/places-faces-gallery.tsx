@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  getGalleryImageLocation,
   getGalleryImages,
   type ArchiveFolder,
   type GalleryImage,
@@ -319,6 +320,9 @@ export function PlacesFacesGallery({
   }, [requestedPage, selectedFolder]);
 
   const activeImage = activeIndex === null ? null : images[activeIndex];
+  const activeImageLocation = activeImage
+    ? getGalleryImageLocation(activeImage.id)
+    : null;
   const pageOffset = (page - 1) * IMAGES_PER_PAGE;
   const visibleFrameHigh = images.length === 0 ? 0 : total - pageOffset;
   const visibleFrameLow = images.length === 0
@@ -679,22 +683,38 @@ export function PlacesFacesGallery({
           role="dialog"
           aria-modal="true"
           aria-labelledby="archive-viewer-title"
-          aria-describedby="archive-viewer-position"
+          aria-describedby="archive-viewer-location archive-viewer-position"
           onClick={() => setActiveIndex(null)}
         >
           <div
             className="flex items-start justify-between gap-4 border-b border-[color:rgba(237,240,235,0.15)] pb-3"
             onClick={(event) => event.stopPropagation()}
           >
-            <div>
+            <div className="min-w-0">
               <p
                 id="archive-viewer-title"
                 className="text-[10px] font-medium uppercase tracking-[0.26em] text-[var(--paper)]"
               >
                 {getFrameLabel(activeIndex ?? 0)}
               </p>
-              <p className="mt-1 max-w-[70vw] truncate text-xs text-[color:rgba(237,240,235,0.45)]">
-                {activeImage.alt}
+              <p
+                id="archive-viewer-location"
+                className="mt-1 max-w-[70vw] text-xs leading-relaxed text-[color:rgba(237,240,235,0.45)] [overflow-wrap:anywhere]"
+                aria-live="polite"
+              >
+                <span className="sr-only">
+                  Archive location: {activeImageLocation?.label}
+                </span>
+                <span aria-hidden="true">
+                  {activeImageLocation?.folderSegments.map((segment, index) => (
+                    <span key={`${segment}-${index}`}>
+                      {segment}/<wbr />
+                    </span>
+                  ))}
+                  <span className="text-[color:rgba(237,240,235,0.7)]">
+                    {activeImageLocation?.filename}
+                  </span>
+                </span>
               </p>
             </div>
             <button

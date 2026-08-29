@@ -2,9 +2,31 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  getGalleryImageLocation,
   getGalleryImages,
   getHomeGalleryPreview,
 } from "./remote-gallery.ts";
+
+test("formats nested archive keys literally and root keys without extensions", () => {
+  assert.deepEqual(getGalleryImageLocation("2025/IMG_4930.jpg"), {
+    folderSegments: ["2025"],
+    filename: "IMG_4930.jpg",
+    label: "2025/IMG_4930.jpg",
+  });
+  assert.deepEqual(
+    getGalleryImageLocation("2026/Winter26/March/IMG_4666.jpg"),
+    {
+      folderSegments: ["2026", "Winter26", "March"],
+      filename: "IMG_4666.jpg",
+      label: "2026/Winter26/March/IMG_4666.jpg",
+    },
+  );
+  assert.deepEqual(getGalleryImageLocation("IMG_4930.jpg"), {
+    folderSegments: [],
+    filename: "IMG_4930",
+    label: "IMG_4930",
+  });
+});
 
 test("requests an exact folder and normalizes the nested folder tree", async (context) => {
   let requestedUrl = "";
