@@ -2,10 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  getArchiveFolderName,
   getGalleryImageLocation,
   getGalleryImages,
   getHomeGalleryPreview,
 } from "./remote-gallery.ts";
+
+test("formats root, nested, and unfiltered archive folder names", () => {
+  assert.equal(getArchiveFolderName("2026"), "2026");
+  assert.equal(getArchiveFolderName("2026/Winter26/March"), "March");
+  assert.equal(getArchiveFolderName("2026/Winter26/March/"), "March");
+  assert.equal(getArchiveFolderName(null), "All photos");
+});
 
 test("formats nested archive keys literally and root keys without extensions", () => {
   assert.deepEqual(getGalleryImageLocation("2025/IMG_4930.jpg"), {
@@ -122,6 +130,32 @@ test("sorts root folders newest first without reordering their children", async 
     ),
     ["HFX26", "India26", "Summer26", "Winter26"],
   );
+});
+
+test("forwards an optional abort signal to the archive request", async (context) => {
+  const originalFetch = globalThis.fetch;
+  const controller = new AbortController();
+  let requestedSignal;
+
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  globalThis.fetch = async (_input, init) => {
+    requestedSignal = init?.signal;
+
+    return new Response(JSON.stringify({ images: [] }), { status: 200 });
+  };
+
+  await getGalleryImages(
+    "https://api.example.test",
+    1,
+    20,
+    "2026",
+    controller.signal,
+  );
+
+  assert.equal(requestedSignal, controller.signal);
 });
 
 test("leaves the newest-first homepage request unfiltered", async (context) => {

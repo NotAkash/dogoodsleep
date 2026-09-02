@@ -609,6 +609,75 @@ button {
   min-width: 0;
 }
 
+.archive-collection-context {
+  margin-bottom: 1.75rem;
+  scroll-margin-top: 6rem;
+}
+
+.archive-collection-kicker,
+.archive-collection-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.archive-collection-title {
+  margin: 0.4rem 0 0;
+  color: var(--ink);
+  font-size: clamp(1.65rem, 3vw, 2.5rem);
+  font-weight: 570;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.archive-collection-status {
+  min-height: 1em;
+  margin-top: 0.65rem;
+}
+
+.archive-gallery-set {
+  transition: opacity 180ms ease;
+}
+
+.archive-gallery-set[data-pending="true"] {
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.archive-transition-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: -0.5rem 0 1.75rem;
+  border-block: 1px solid var(--rule);
+  padding: 0.85rem 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.archive-transition-error p {
+  margin: 0;
+}
+
+.archive-transition-error button {
+  flex: none;
+  min-height: 2.5rem;
+  border: 1px solid var(--ink);
+  background: transparent;
+  padding: 0.55rem 0.8rem;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
 .archive-mobile-index {
   margin-bottom: 2.5rem;
   border-top: 1px solid var(--rule);
@@ -732,6 +801,11 @@ button {
   color: var(--paper);
 }
 
+.archive-folder-button[data-pending="true"]:not([aria-current="page"]) {
+  background: var(--surface);
+  color: var(--ink);
+}
+
 .archive-folder-button[aria-current="page"]::before {
   position: absolute;
   top: 50%;
@@ -785,7 +859,12 @@ button {
 }
 
 .archive-frame img {
+  opacity: 0;
   transform-origin: center;
+}
+
+.archive-frame img[data-loaded="true"] {
+  opacity: 1;
 }
 
 .archive-frame:hover img {
@@ -800,6 +879,12 @@ button {
 .archive-viewer {
   isolation: isolate;
   color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .archive-gallery-set {
+    transition: none;
+  }
 }
 
 @media (min-width: 1024px) {

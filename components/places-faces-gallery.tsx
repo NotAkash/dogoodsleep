@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  getArchiveFolderName,
   getGalleryImageLocation,
   getGalleryImages,
   type ArchiveFolder,
@@ -15,28 +16,48 @@ type PlacesFacesGalleryProps = {
 
 const IMAGES_PER_PAGE = 20;
 
+type ArchiveRequestReason = "initial" | "filter" | "page" | "refresh";
+
+type ArchiveRequest = {
+  folder: string | null;
+  id: number;
+  page: GalleryPageRequest;
+  preserveCurrent: boolean;
+  reason: ArchiveRequestReason;
+};
+
 type ArchiveIndexProps = {
   archiveTotal: number;
   folders: ArchiveFolder[];
   initialSelectionPending: boolean;
   loading: boolean;
   onSelect: (folder: string | null, hasChildren: boolean) => void;
+  pendingFolder: string | null | undefined;
   selectedFolder: string | null;
 };
 
 function ArchiveFolderItems({
   folders,
   onSelect,
+  pendingFolder,
   selectedFolder,
-}: Pick<ArchiveIndexProps, "folders" | "onSelect" | "selectedFolder">) {
+}: Pick<
+  ArchiveIndexProps,
+  "folders" | "onSelect" | "pendingFolder" | "selectedFolder"
+>) {
+  const activeFolder = pendingFolder !== undefined
+    ? pendingFolder
+    : selectedFolder;
+
   return (
     <ul className="archive-folder-list">
       {folders.map((folder) => {
         const hasChildren = folder.children.length > 0;
         const isExpanded = hasChildren && (
-          selectedFolder === folder.id
-          || selectedFolder?.startsWith(`${folder.id}/`) === true
+          activeFolder === folder.id
+          || activeFolder?.startsWith(`${folder.id}/`) === true
         );
+        const isPending = pendingFolder === folder.id;
 
         return (
           <li key={folder.id}>
@@ -45,6 +66,8 @@ function ArchiveFolderItems({
               className="archive-folder-button"
               aria-current={selectedFolder === folder.id ? "page" : undefined}
               aria-expanded={hasChildren ? isExpanded : undefined}
+              aria-busy={isPending || undefined}
+              data-pending={isPending ? "true" : undefined}
               onClick={() => onSelect(folder.id, hasChildren)}
             >
               <span className="archive-folder-label">
@@ -56,13 +79,15 @@ function ArchiveFolderItems({
                 ) : null}
               </span>
               <span className="archive-folder-count" aria-hidden="true">
-                {folder.imageCount}
+                {isPending ? "…" : folder.imageCount}
               </span>
+              {isPending ? <span className="sr-only">Loading.</span> : null}
             </button>
             {isExpanded ? (
               <ArchiveFolderItems
                 folders={folder.children}
                 onSelect={onSelect}
+                pendingFolder={pendingFolder}
                 selectedFolder={selectedFolder}
               />
             ) : null}
@@ -79,8 +104,11 @@ function ArchiveIndex({
   initialSelectionPending,
   loading,
   onSelect,
+  pendingFolder,
   selectedFolder,
 }: ArchiveIndexProps) {
+  const allPhotosPending = pendingFolder === null;
+
   return (
     <nav className="archive-index" aria-label="Places & Faces folders">
       <button
@@ -91,17 +119,25 @@ function ArchiveIndex({
             ? "page"
             : undefined
         }
+        aria-busy={allPhotosPending || undefined}
+        data-pending={allPhotosPending ? "true" : undefined}
         onClick={() => onSelect(null, false)}
       >
         <span>All photos</span>
         <span className="archive-folder-count" aria-hidden="true">
-          {loading && archiveTotal === 0 ? "—" : archiveTotal}
+          {allPhotosPending
+            ? "…"
+            : loading && archiveTotal === 0
+              ? "—"
+              : archiveTotal}
         </span>
+        {allPhotosPending ? <span className="sr-only">Loading.</span> : null}
       </button>
       {folders.length > 0 ? (
         <ArchiveFolderItems
           folders={folders}
           onSelect={onSelect}
+          pendingFolder={pendingFolder}
           selectedFolder={selectedFolder}
         />
       ) : (
@@ -119,79 +155,149 @@ export function PlacesFacesGallery({
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [transitionError, setTransitionError] = useState<string | null>(null);
+  const [failedRequest, setFailedRequest] =
+    useState<ArchiveRequest | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [page, setPage] = useState(1);
-  const [requestedPage, setRequestedPage] =
-    useState<GalleryPageRequest>(1);
+  const [request, setRequest] = useState<ArchiveRequest>({
+    folder: null,
+    id: 0,
+    page: 1,
+    preserveCurrent: false,
+    reason: "initial",
+  });
   const [total, setTotal] = useState(0);
   const [archiveTotal, setArchiveTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [hasPaginationMeta, setHasPaginationMeta] = useState(false);
   const [folders, setFolders] = useState<ArchiveFolder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [pendingFolder, setPendingFolder] =
+    useState<string | null | undefined>(undefined);
+  const [hasCommittedResult, setHasCommittedResult] = useState(false);
+  const [scrollCommitId, setScrollCommitId] = useState<number | null>(null);
   const [initialSelectionPending, setInitialSelectionPending] = useState(true);
   const [mobileIndexOpen, setMobileIndexOpen] = useState(false);
-  const [loadAttempt, setLoadAttempt] = useState(0);
   const initialSelectionResolvedRef = useRef(false);
+  const latestRequestIdRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const galleryStartRef = useRef<HTMLDivElement>(null);
   const galleryTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mobileSummaryRef = useRef<HTMLButtonElement>(null);
+
+  const startArchiveRequest = useCallback((
+    folder: string | null,
+    requestedPage: GalleryPageRequest,
+    reason: ArchiveRequestReason,
+    preserveCurrent: boolean,
+  ) => {
+    const id = latestRequestIdRef.current + 1;
+
+    latestRequestIdRef.current = id;
+    setRequest({
+      folder,
+      id,
+      page: requestedPage,
+      preserveCurrent,
+      reason,
+    });
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
     let keepLoading = false;
+    const controller = new AbortController();
 
     async function loadImages() {
       try {
         setLoading(true);
         setError(null);
-        setImages([]);
+        setTransitionError(null);
+        setFailedRequest(null);
+
+        if (!request.preserveCurrent) {
+          setImages([]);
+        }
 
         const nextPage = await getGalleryImages(
           imageApiUrl,
-          requestedPage,
+          request.page,
           IMAGES_PER_PAGE,
-          selectedFolder ?? undefined,
+          request.folder ?? undefined,
+          controller.signal,
         );
 
-        if (isMounted) {
-          setFolders(nextPage.folders);
+        if (
+          isMounted
+          && request.id === latestRequestIdRef.current
+        ) {
 
           if (!initialSelectionResolvedRef.current) {
             const defaultFolder = nextPage.folders[0];
 
             initialSelectionResolvedRef.current = true;
-            setInitialSelectionPending(false);
             setArchiveTotal(nextPage.total);
 
             if (defaultFolder) {
               keepLoading = true;
-              setSelectedFolder(defaultFolder.id);
-              setRequestedPage(1);
+              startArchiveRequest(
+                defaultFolder.id,
+                1,
+                "initial",
+                false,
+              );
               return;
             }
           }
 
+          if (request.reason === "filter") {
+            setScrollCommitId(request.id);
+          }
+
+          setFolders(nextPage.folders);
           setImages(nextPage.images);
+          setSelectedFolder(request.folder);
           setPage(nextPage.page);
           setTotal(nextPage.total);
           setTotalPages(nextPage.totalPages);
           setHasPaginationMeta(nextPage.hasPaginationMeta);
-          if (selectedFolder === null) {
+          setHasCommittedResult(true);
+          setInitialSelectionPending(false);
+          setPendingFolder(undefined);
+          if (request.folder === null) {
             setArchiveTotal(nextPage.total);
           }
+
         }
       } catch (loadError) {
-        if (isMounted) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Unable to load gallery images",
-          );
+        if (
+          !isMounted
+          || request.id !== latestRequestIdRef.current
+          || (loadError instanceof Error && loadError.name === "AbortError")
+        ) {
+          return;
+        }
+
+        const message = loadError instanceof Error
+          ? loadError.message
+          : "Unable to load gallery images";
+
+        setFailedRequest(request);
+        setPendingFolder(undefined);
+
+        if (request.preserveCurrent) {
+          setTransitionError(message);
+        } else {
+          setError(message);
         }
       } finally {
-        if (isMounted && !keepLoading) {
+        if (
+          isMounted
+          && !keepLoading
+          && request.id === latestRequestIdRef.current
+        ) {
           setLoading(false);
         }
       }
@@ -201,8 +307,9 @@ export function PlacesFacesGallery({
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
-  }, [imageApiUrl, requestedPage, selectedFolder, loadAttempt]);
+  }, [imageApiUrl, request, startArchiveRequest]);
 
   const isViewerOpen = activeIndex !== null;
 
@@ -342,7 +449,32 @@ export function PlacesFacesGallery({
 
   useEffect(() => {
     setActiveIndex(null);
-  }, [requestedPage, selectedFolder]);
+  }, [request.id]);
+
+  useEffect(() => {
+    if (scrollCommitId === null) {
+      return;
+    }
+
+    const scrollFrame = window.requestAnimationFrame(() => {
+      const galleryStart = galleryStartRef.current;
+
+      if (!galleryStart || galleryStart.getBoundingClientRect().top >= 0) {
+        return;
+      }
+
+      const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+
+      galleryStart.scrollIntoView({
+        behavior: reduceMotion ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(scrollFrame);
+  }, [scrollCommitId]);
 
   const activeImage = activeIndex === null ? null : images[activeIndex];
   const activeImageLocation = activeImage
@@ -401,28 +533,70 @@ export function PlacesFacesGallery({
   const getImageKey = (image: GalleryImage, index: number) =>
     `${selectedFolder ?? "all"}-${page}-${image.id}-${index}`;
 
+  const displayedFolderName = getArchiveFolderName(selectedFolder);
+  const pendingFolderName = pendingFolder !== undefined
+    ? getArchiveFolderName(pendingFolder)
+    : null;
+  const failedFolderName = failedRequest?.reason === "filter"
+    ? getArchiveFolderName(failedRequest.folder)
+    : null;
+  const isFilterPending = Boolean(
+    loading
+    && request.reason === "filter"
+    && request.preserveCurrent
+    && pendingFolder !== undefined,
+  );
+  const blockingLoading = loading && !isFilterPending;
+
+  const retryFailedRequest = () => {
+    if (!failedRequest) {
+      return;
+    }
+
+    if (failedRequest.reason === "filter") {
+      setPendingFolder(failedRequest.folder);
+    }
+
+    startArchiveRequest(
+      failedRequest.folder,
+      failedRequest.page,
+      failedRequest.reason,
+      failedRequest.preserveCurrent,
+    );
+  };
+
   const handleFolderSelect = (
     folder: string | null,
     hasChildren = false,
   ) => {
     if (initialSelectionPending) {
       initialSelectionResolvedRef.current = true;
-      setInitialSelectionPending(false);
     }
 
     if (mobileIndexOpen && !hasChildren) {
       setMobileIndexOpen(false);
-      window.requestAnimationFrame(() => mobileSummaryRef.current?.focus());
+      window.requestAnimationFrame(() => {
+        mobileSummaryRef.current?.focus({ preventScroll: true });
+      });
     }
 
-    if (folder === selectedFolder) {
+    if (pendingFolder !== undefined && folder === pendingFolder) {
+      return;
+    }
+
+    if (pendingFolder === undefined && folder === selectedFolder) {
       return;
     }
 
     galleryTriggerRef.current = null;
     setActiveIndex(null);
-    setSelectedFolder(folder);
-    setRequestedPage(1);
+    setPendingFolder(folder);
+    startArchiveRequest(
+      folder,
+      1,
+      "filter",
+      hasCommittedResult,
+    );
   };
 
   return (
@@ -453,7 +627,7 @@ export function PlacesFacesGallery({
               <div>
                 <dt>Set</dt>
                 <dd className="mt-1.5 font-medium text-[var(--ink)]">
-                  {loading
+                  {blockingLoading
                     ? "—"
                     : hasPaginationMeta
                       ? `${String(page).padStart(2, "0")} / ${String(totalPages).padStart(2, "0")}`
@@ -463,7 +637,7 @@ export function PlacesFacesGallery({
               <div>
                 <dt>Frames</dt>
                 <dd className="mt-1.5 font-medium text-[var(--ink)]">
-                  {loading
+                  {blockingLoading
                     ? "—"
                     : images.length === 0
                       ? "0"
@@ -475,7 +649,7 @@ export function PlacesFacesGallery({
               <div>
                 <dt>Collection</dt>
                 <dd className="mt-1.5 font-medium text-[var(--ink)]">
-                  {loading
+                  {blockingLoading
                     ? "Reading"
                     : hasPaginationMeta
                       ? `${total} in set`
@@ -498,9 +672,11 @@ export function PlacesFacesGallery({
             <span>
               <span className="archive-mobile-index-label">Browse Places &amp; Faces</span>
               <span className="archive-mobile-index-value">
-                {initialSelectionPending
-                  ? "Reading index…"
-                  : selectedFolder ?? "All photos"}
+                {pendingFolderName
+                  ? `Loading ${pendingFolderName}…`
+                  : initialSelectionPending
+                    ? "Reading index…"
+                    : displayedFolderName}
               </span>
             </span>
             <span className="archive-mobile-index-mark" aria-hidden="true">+</span>
@@ -513,6 +689,7 @@ export function PlacesFacesGallery({
                 initialSelectionPending={initialSelectionPending}
                 loading={loading}
                 onSelect={handleFolderSelect}
+                pendingFolder={pendingFolder}
                 selectedFolder={selectedFolder}
               />
             </div>
@@ -525,8 +702,10 @@ export function PlacesFacesGallery({
               <div className="archive-index-heading">
                 <p>Places &amp; Faces index</p>
                 <p>
-                  {initialSelectionPending
-                    ? "Choosing set"
+                  {pendingFolder !== undefined
+                    ? "Loading set"
+                    : initialSelectionPending
+                      ? "Choosing set"
                     : selectedFolder
                       ? "Filtered set"
                       : "Complete set"}
@@ -538,6 +717,7 @@ export function PlacesFacesGallery({
                 initialSelectionPending={initialSelectionPending}
                 loading={loading}
                 onSelect={handleFolderSelect}
+                pendingFolder={pendingFolder}
                 selectedFolder={selectedFolder}
               />
             </div>
@@ -560,13 +740,13 @@ export function PlacesFacesGallery({
             </p>
             <button
               type="button"
-              onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+              onClick={retryFailedRequest}
               className="archive-action mt-6 min-h-11 bg-[var(--ink)] px-5 py-3 text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--paper)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)]"
             >
               Retry Places &amp; Faces
             </button>
           </div>
-        ) : loading ? (
+        ) : blockingLoading ? (
           <div
             className="archive-loading"
             role="status"
@@ -586,89 +766,141 @@ export function PlacesFacesGallery({
               ))}
             </div>
           </div>
-        ) : images.length === 0 ? (
-          <div
-            className="archive-state border-y border-[var(--rule)] py-14 sm:py-20"
-            role="status"
-          >
-            <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[var(--muted)]">
-              Empty set
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[var(--ink)]">
-              {selectedFolder
-                ? `No photographs in ${selectedFolder}.`
-                : "No photographs were returned."}
-            </h2>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
-              {selectedFolder
-                ? "Choose another folder or return to all of Places & Faces."
-                : "Places & Faces is currently empty."}
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              {selectedFolder ? (
-                <button
-                  type="button"
-                  onClick={() => handleFolderSelect(null)}
-                  className="archive-action min-h-11 bg-[var(--ink)] px-5 py-3 text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--paper)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)]"
-                >
-                  All photos
-                </button>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setLoadAttempt((attempt) => attempt + 1)}
-                className="archive-action min-h-11 border border-[var(--ink)] px-5 py-3 text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)]"
-              >
-                Check again
-              </button>
-            </div>
-          </div>
         ) : (
           <>
-            <div className="archive-register mb-5 flex items-center justify-between gap-4 text-[9px] uppercase tracking-[0.22em] text-[var(--muted)] sm:mb-8 sm:text-[10px]">
-              <p>
-                {hasPaginationMeta
-                  ? `${images.length} frames · ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)}`
-                  : `${images.length} frames in current set`}
+            <div
+              ref={galleryStartRef}
+              className="archive-collection-context"
+            >
+              <p className="archive-collection-kicker">
+                {selectedFolder ? "Current folder" : "Current set"}
               </p>
-              <p className="hidden sm:block">
-                {selectedFolder ?? "All photos"} · Select a frame to inspect
+              <h2 className="archive-collection-title">
+                {displayedFolderName}
+              </h2>
+              <p
+                className="archive-collection-status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {isFilterPending && pendingFolderName
+                  ? `Loading ${pendingFolderName}…`
+                  : "\u00a0"}
               </p>
             </div>
+
+            {transitionError && failedFolderName ? (
+              <div className="archive-transition-error" role="alert">
+                <p>
+                  {failedFolderName} could not be loaded. The current folder
+                  remains open.
+                </p>
+                <button type="button" onClick={retryFailedRequest}>
+                  Retry {failedFolderName}
+                </button>
+              </div>
+            ) : null}
 
             <div
-              className="archive-grid columns-2 gap-2.5 sm:columns-3 sm:gap-10 lg:gap-12"
-              aria-label="Places & Faces photographs"
+              className="archive-gallery-set"
+              data-pending={isFilterPending ? "true" : undefined}
+              inert={isFilterPending ? true : undefined}
             >
-              {images.map((image, index) => {
-                const frameLabel = getFrameLabel(index);
-
-                return (
+              {images.length === 0 ? (
+                <div
+                  className="archive-state border-y border-[var(--rule)] py-14 sm:py-20"
+                  role="status"
+                >
+                  <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[var(--muted)]">
+                    Empty set
+                  </p>
+                  <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[var(--ink)]">
+                    {selectedFolder
+                      ? `No photographs in ${displayedFolderName}.`
+                      : "No photographs were returned."}
+                  </h3>
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
+                    {selectedFolder
+                      ? "Choose another folder or return to all of Places & Faces."
+                      : "Places & Faces is currently empty."}
+                  </p>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    {selectedFolder ? (
+                      <button
+                        type="button"
+                        onClick={() => handleFolderSelect(null)}
+                        className="archive-action min-h-11 bg-[var(--ink)] px-5 py-3 text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--paper)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)]"
+                      >
+                        All photos
+                      </button>
+                    ) : null}
                   <button
-                    key={getImageKey(image, index)}
                     type="button"
-                    onClick={(event) => {
-                      galleryTriggerRef.current = event.currentTarget;
-                      setActiveIndex(index);
-                    }}
-                    className="archive-frame group mb-2.5 block w-full break-inside-avoid text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)] sm:mb-10 lg:mb-12"
-                    aria-label={`${image.alt}. Open ${frameLabel.toLowerCase()}.`}
+                    onClick={() => startArchiveRequest(
+                      selectedFolder,
+                      1,
+                      "refresh",
+                      false,
+                    )}
+                    className="archive-action min-h-11 border border-[var(--ink)] px-5 py-3 text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)]"
                   >
-                    <span className="relative block overflow-hidden bg-[var(--surface)]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={image.src}
-                        alt=""
-                        className="block h-auto w-full motion-safe:transition-opacity motion-safe:duration-300 motion-reduce:transition-none"
-                        loading="lazy"
-                      />
-                    </span>
+                    Check again
                   </button>
-                );
-              })}
-            </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="archive-register mb-5 flex items-center justify-between gap-4 text-[9px] uppercase tracking-[0.22em] text-[var(--muted)] sm:mb-8 sm:text-[10px]">
+                    <p>
+                      {hasPaginationMeta
+                        ? `${images.length} frames · ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)}`
+                        : `${images.length} frames in current set`}
+                    </p>
+                    <p className="hidden sm:block">
+                      Select a frame to inspect
+                    </p>
+                  </div>
 
-            <footer className="archive-pagination -mx-5 mt-16 flex flex-col gap-7 px-5 py-8 sm:-mx-10 sm:mt-24 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-10 lg:-mx-12 lg:px-12">
+                  <div
+                    className="archive-grid columns-2 gap-2.5 sm:columns-3 sm:gap-10 lg:gap-12"
+                    aria-label={`Places & Faces photographs in ${displayedFolderName}`}
+                  >
+                    {images.map((image, index) => {
+                      const frameLabel = getFrameLabel(index);
+
+                      return (
+                        <button
+                          key={getImageKey(image, index)}
+                          type="button"
+                          onClick={(event) => {
+                            galleryTriggerRef.current = event.currentTarget;
+                            setActiveIndex(index);
+                          }}
+                          className="archive-frame group mb-2.5 block w-full break-inside-avoid text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)] sm:mb-10 lg:mb-12"
+                          aria-label={`${image.alt}. Open ${frameLabel.toLowerCase()}.`}
+                        >
+                          <span className="relative block overflow-hidden bg-[var(--surface)]">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={image.src}
+                              alt=""
+                              className="block h-auto w-full motion-safe:transition-opacity motion-safe:duration-300 motion-reduce:transition-none"
+                              data-loaded="false"
+                              loading="lazy"
+                              onError={(event) => {
+                                event.currentTarget.dataset.loaded = "true";
+                              }}
+                              onLoad={(event) => {
+                                event.currentTarget.dataset.loaded = "true";
+                              }}
+                            />
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <footer className="archive-pagination -mx-5 mt-16 flex flex-col gap-7 px-5 py-8 sm:-mx-10 sm:mt-24 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-10 lg:-mx-12 lg:px-12">
               <p className="text-[10px] uppercase tracking-[0.22em] text-[color:rgba(237,240,235,0.5)]">
                 {hasPaginationMeta
                   ? `Frames ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)} of ${total}`
@@ -681,9 +913,12 @@ export function PlacesFacesGallery({
               >
                 <button
                   type="button"
-                  onClick={() =>
-                    setRequestedPage(Math.max(1, page - 1))
-                  }
+                  onClick={() => startArchiveRequest(
+                    selectedFolder,
+                    Math.max(1, page - 1),
+                    "page",
+                    false,
+                  )}
                   disabled={
                     loading || page === 1 || !hasPaginationMeta
                   }
@@ -698,9 +933,12 @@ export function PlacesFacesGallery({
                 </span>
                 <button
                   type="button"
-                  onClick={() =>
-                    setRequestedPage(Math.min(totalPages, page + 1))
-                  }
+                  onClick={() => startArchiveRequest(
+                    selectedFolder,
+                    Math.min(totalPages, page + 1),
+                    "page",
+                    false,
+                  )}
                   disabled={
                     loading || page === totalPages || !hasPaginationMeta
                   }
@@ -709,7 +947,10 @@ export function PlacesFacesGallery({
                   Older →
                 </button>
               </nav>
-            </footer>
+                  </footer>
+                </>
+              )}
+            </div>
           </>
         )}
           </div>

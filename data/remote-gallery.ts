@@ -28,6 +28,16 @@ export type GalleryPage = {
 
 export type GalleryPageRequest = number | "last";
 
+export function getArchiveFolderName(folder: string | null | undefined): string {
+  if (!folder) {
+    return "All photos";
+  }
+
+  const segments = folder.split("/").filter(Boolean);
+
+  return segments.at(-1) ?? "All photos";
+}
+
 export function getGalleryImageLocation(key: string): GalleryImageLocation {
   const segments = key.split("/");
   const filename = segments.pop() ?? key;
@@ -118,6 +128,7 @@ export async function getGalleryImages(
   page: GalleryPageRequest = 1,
   limit = 20,
   folder?: string,
+  signal?: AbortSignal,
 ): Promise<GalleryPage> {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
 
@@ -135,6 +146,7 @@ export async function getGalleryImages(
 
   const response = await fetch(url, {
     cache: "no-store",
+    signal,
   });
 
   if (!response.ok) {
