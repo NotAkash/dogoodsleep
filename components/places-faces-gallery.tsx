@@ -18,6 +18,7 @@ const IMAGES_PER_PAGE = 20;
 type ArchiveIndexProps = {
   archiveTotal: number;
   folders: ArchiveFolder[];
+  initialSelectionPending: boolean;
   loading: boolean;
   onSelect: (folder: string | null, hasChildren: boolean) => void;
   selectedFolder: string | null;
@@ -75,6 +76,7 @@ function ArchiveFolderItems({
 function ArchiveIndex({
   archiveTotal,
   folders,
+  initialSelectionPending,
   loading,
   onSelect,
   selectedFolder,
@@ -84,7 +86,11 @@ function ArchiveIndex({
       <button
         type="button"
         className="archive-folder-button archive-folder-all"
-        aria-current={selectedFolder === null ? "page" : undefined}
+        aria-current={
+          !initialSelectionPending && selectedFolder === null
+            ? "page"
+            : undefined
+        }
         onClick={() => onSelect(null, false)}
       >
         <span>All photos</span>
@@ -123,8 +129,10 @@ export function PlacesFacesGallery({
   const [hasPaginationMeta, setHasPaginationMeta] = useState(false);
   const [folders, setFolders] = useState<ArchiveFolder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [initialSelectionPending, setInitialSelectionPending] = useState(true);
   const [mobileIndexOpen, setMobileIndexOpen] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const initialSelectionResolvedRef = useRef(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const galleryTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -132,6 +140,7 @@ export function PlacesFacesGallery({
 
   useEffect(() => {
     let isMounted = true;
+    let keepLoading = false;
 
     async function loadImages() {
       try {
@@ -147,12 +156,28 @@ export function PlacesFacesGallery({
         );
 
         if (isMounted) {
+          setFolders(nextPage.folders);
+
+          if (!initialSelectionResolvedRef.current) {
+            const defaultFolder = nextPage.folders[0];
+
+            initialSelectionResolvedRef.current = true;
+            setInitialSelectionPending(false);
+            setArchiveTotal(nextPage.total);
+
+            if (defaultFolder) {
+              keepLoading = true;
+              setSelectedFolder(defaultFolder.id);
+              setRequestedPage(1);
+              return;
+            }
+          }
+
           setImages(nextPage.images);
           setPage(nextPage.page);
           setTotal(nextPage.total);
           setTotalPages(nextPage.totalPages);
           setHasPaginationMeta(nextPage.hasPaginationMeta);
-          setFolders(nextPage.folders);
           if (selectedFolder === null) {
             setArchiveTotal(nextPage.total);
           }
@@ -166,7 +191,7 @@ export function PlacesFacesGallery({
           );
         }
       } finally {
-        if (isMounted) {
+        if (isMounted && !keepLoading) {
           setLoading(false);
         }
       }
@@ -380,6 +405,11 @@ export function PlacesFacesGallery({
     folder: string | null,
     hasChildren = false,
   ) => {
+    if (initialSelectionPending) {
+      initialSelectionResolvedRef.current = true;
+      setInitialSelectionPending(false);
+    }
+
     if (mobileIndexOpen && !hasChildren) {
       setMobileIndexOpen(false);
       window.requestAnimationFrame(() => mobileSummaryRef.current?.focus());
@@ -468,7 +498,9 @@ export function PlacesFacesGallery({
             <span>
               <span className="archive-mobile-index-label">Browse Places &amp; Faces</span>
               <span className="archive-mobile-index-value">
-                {selectedFolder ?? "All photos"}
+                {initialSelectionPending
+                  ? "Reading index…"
+                  : selectedFolder ?? "All photos"}
               </span>
             </span>
             <span className="archive-mobile-index-mark" aria-hidden="true">+</span>
@@ -478,6 +510,7 @@ export function PlacesFacesGallery({
               <ArchiveIndex
                 archiveTotal={archiveTotal}
                 folders={folders}
+                initialSelectionPending={initialSelectionPending}
                 loading={loading}
                 onSelect={handleFolderSelect}
                 selectedFolder={selectedFolder}
@@ -491,11 +524,18 @@ export function PlacesFacesGallery({
             <div className="archive-index-sticky">
               <div className="archive-index-heading">
                 <p>Places &amp; Faces index</p>
-                <p>{selectedFolder ? "Filtered set" : "Complete set"}</p>
+                <p>
+                  {initialSelectionPending
+                    ? "Choosing set"
+                    : selectedFolder
+                      ? "Filtered set"
+                      : "Complete set"}
+                </p>
               </div>
               <ArchiveIndex
                 archiveTotal={archiveTotal}
                 folders={folders}
+                initialSelectionPending={initialSelectionPending}
                 loading={loading}
                 onSelect={handleFolderSelect}
                 selectedFolder={selectedFolder}

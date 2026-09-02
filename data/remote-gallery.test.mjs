@@ -81,6 +81,49 @@ test("requests an exact folder and normalizes the nested folder tree", async (co
   });
 });
 
+test("sorts root folders newest first without reordering their children", async (context) => {
+  const originalFetch = globalThis.fetch;
+
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const children = ["HFX26", "India26", "Summer26", "Winter26"].map(
+    (label) => ({
+      id: `2026/${label}`,
+      label,
+      imageCount: 1,
+      children: [],
+    }),
+  );
+
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    images: [],
+    page: 1,
+    total: 0,
+    totalPages: 1,
+    folders: [
+      { id: "2023", label: "2023", imageCount: 1, children: [] },
+      { id: "2026", label: "2026", imageCount: 4, children },
+      { id: "2025", label: "2025", imageCount: 1, children: [] },
+      { id: "2027", label: "2027", imageCount: 1, children: [] },
+    ],
+  }), { status: 200 });
+
+  const page = await getGalleryImages("https://api.example.test", 1, 20);
+
+  assert.deepEqual(
+    page.folders.map((folder) => folder.id),
+    ["2027", "2026", "2025", "2023"],
+  );
+  assert.deepEqual(
+    page.folders.find((folder) => folder.id === "2026")?.children.map(
+      (folder) => folder.label,
+    ),
+    ["HFX26", "India26", "Summer26", "Winter26"],
+  );
+});
+
 test("leaves the newest-first homepage request unfiltered", async (context) => {
   let requestedUrl = "";
   const originalFetch = globalThis.fetch;

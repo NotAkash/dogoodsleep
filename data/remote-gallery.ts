@@ -68,6 +68,11 @@ type ImagesResponse = {
   folders?: unknown;
 };
 
+const archiveRootCollator = new Intl.Collator("en", {
+  numeric: true,
+  sensitivity: "base",
+});
+
 function normalizeFolders(value: unknown): ArchiveFolder[] {
   if (!Array.isArray(value)) {
     return [];
@@ -95,6 +100,16 @@ function normalizeFolders(value: unknown): ArchiveFolder[] {
           ? Math.floor(folder.imageCount)
           : 0,
     }];
+  });
+}
+
+function sortArchiveRootsNewestFirst(
+  folders: ArchiveFolder[],
+): ArchiveFolder[] {
+  return [...folders].sort((left, right) => {
+    const labelOrder = archiveRootCollator.compare(right.label, left.label);
+
+    return labelOrder || archiveRootCollator.compare(right.id, left.id);
   });
 }
 
@@ -154,7 +169,7 @@ export async function getGalleryImages(
     total: data.total ?? images.length,
     totalPages: data.totalPages ?? 1,
     hasPaginationMeta,
-    folders: normalizeFolders(data.folders),
+    folders: sortArchiveRootsNewestFirst(normalizeFolders(data.folders)),
   };
 }
 
