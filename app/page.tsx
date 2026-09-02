@@ -6,7 +6,9 @@ import { getJournalEntries } from "@/data/journal";
 import { normalizeGalleryBaseUrl } from "@/data/remote-gallery";
 
 export default function HomePage() {
-    const imageApiUrl = normalizeGalleryBaseUrl(process.env.IMAGES_API_URL);
+    const imageApiUrl = normalizeGalleryBaseUrl(
+        process.env.IMAGES_API_URL ?? "https://api.dogoodsleep.com",
+    );
     const homeContent = getHomeContent();
     const journalEntries = getJournalEntries();
     const latestDrafts = journalEntries.slice(0, 2);

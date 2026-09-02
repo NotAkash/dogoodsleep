@@ -2,6 +2,7 @@ const SITE_ORIGIN = "https://dogoodsleep.com";
 const IMAGES_ORIGIN = "https://images.dogoodsleep.com";
 const LETTERBOXD_ORIGIN = "https://letterboxd.com";
 const STORYGRAPH_ORIGIN = "https://app.thestorygraph.com";
+const SITE_PREVIEW_ORIGIN = /^https:\/\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-dogoodsleep\.dogoodsleep\.workers\.dev$/;
 const ACTIVITY_CACHE_TTL_SECONDS = 30 * 60;
 const ACTIVITY_CACHE_VERSION = "2";
 const MAX_RSS_BYTES = 512 * 1024;
@@ -25,7 +26,6 @@ type MutableArchiveFolder = ArchiveFolder & {
 
 function json(data: unknown, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
-  headers.set("access-control-allow-origin", SITE_ORIGIN);
   if (!headers.has("cache-control")) {
     headers.set("cache-control", "no-store, max-age=0");
   }
@@ -33,6 +33,31 @@ function json(data: unknown, init: ResponseInit = {}): Response {
 
   return new Response(JSON.stringify(data), {
     ...init,
+    headers,
+  });
+}
+
+function allowedRequestOrigin(request: Request): string | undefined {
+  const origin = request.headers.get("origin")?.trim();
+
+  return origin === SITE_ORIGIN || (origin && SITE_PREVIEW_ORIGIN.test(origin))
+    ? origin
+    : undefined;
+}
+
+function withCors(response: Response, request: Request): Response {
+  const headers = new Headers(response.headers);
+  const origin = allowedRequestOrigin(request);
+
+  headers.delete("access-control-allow-origin");
+  if (origin) {
+    headers.set("access-control-allow-origin", origin);
+  }
+  headers.append("vary", "Origin");
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
     headers,
   });
 }
@@ -524,7 +549,6 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       headers: {
         "access-control-allow-headers": "content-type",
         "access-control-allow-methods": "GET,OPTIONS",
-        "access-control-allow-origin": SITE_ORIGIN,
         "access-control-max-age": "86400",
       },
     });
@@ -602,15 +626,19 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    let response: Response;
+
     try {
-      return await handleRequest(request, env);
+      response = await handleRequest(request, env);
     } catch (error) {
       console.error(JSON.stringify({
         message: "archive API request failed",
         error: error instanceof Error ? error.message : String(error),
         path: new URL(request.url).pathname,
       }));
-      return json({ error: "Internal server error" }, { status: 500 });
+      response = json({ error: "Internal server error" }, { status: 500 });
     }
+
+    return withCors(response, request);
   },
 } satisfies ExportedHandler<Env>;

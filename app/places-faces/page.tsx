@@ -2,7 +2,9 @@ import { PlacesFacesGallery } from "@/components/places-faces-gallery";
 import { normalizeGalleryBaseUrl } from "@/data/remote-gallery";
 
 export default function PlacesFacesPage() {
-  const imageApiUrl = normalizeGalleryBaseUrl(process.env.IMAGES_API_URL);
+  const imageApiUrl = normalizeGalleryBaseUrl(
+    process.env.IMAGES_API_URL ?? "https://api.dogoodsleep.com",
+  );
 
   return (
     <main

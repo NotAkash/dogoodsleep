@@ -42,18 +42,22 @@ function mockEnv(listedObjects = objects) {
   };
 }
 
-async function request(path, listedObjects = objects) {
+async function request(path, listedObjects = objects, origin) {
   const { env, listCalls } = mockEnv(listedObjects);
-  const response = await worker.fetch(new Request(`https://api.example.test${path}`), env);
+  const response = await worker.fetch(new Request(`https://api.example.test${path}`, {
+    headers: origin ? { origin } : undefined,
+  }), env);
   return { response, body: await response.json(), listCalls };
 }
 
-async function activityRequest(env, feedResponse) {
+async function activityRequest(env, feedResponse, origin = "https://dogoodsleep.com") {
   const originalFetch = globalThis.fetch;
 
   globalThis.fetch = async () => feedResponse;
   try {
-    const response = await worker.fetch(new Request("https://api.example.test/activity"), env);
+    const response = await worker.fetch(new Request("https://api.example.test/activity", {
+      headers: { origin },
+    }), env);
     return { response, body: await response.json() };
   } finally {
     globalThis.fetch = originalFetch;
@@ -126,6 +130,27 @@ test("returns every nested folder with descendant-inclusive image counts", async
       ],
     },
   ]);
+});
+
+test("allows the production site and this Worker's branch preview origins", async () => {
+  const production = await request("/images?limit=1", objects, "https://dogoodsleep.com");
+  const preview = await request(
+    "/images?limit=1",
+    objects,
+    "https://gallery-filter-dogoodsleep.dogoodsleep.workers.dev",
+  );
+  const unrelated = await request("/images?limit=1", objects, "https://example.com");
+
+  assert.equal(
+    production.response.headers.get("access-control-allow-origin"),
+    "https://dogoodsleep.com",
+  );
+  assert.equal(
+    preview.response.headers.get("access-control-allow-origin"),
+    "https://gallery-filter-dogoodsleep.dogoodsleep.workers.dev",
+  );
+  assert.equal(unrelated.response.headers.get("access-control-allow-origin"), null);
+  assert.match(production.response.headers.get("vary"), /Origin/);
 });
 
 test("unfiltered results include every image newest first by mtime", async () => {
