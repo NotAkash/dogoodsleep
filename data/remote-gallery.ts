@@ -2,6 +2,8 @@ export type GalleryImage = {
   id: string;
   src: string;
   alt: string;
+  width?: number;
+  height?: number;
 };
 
 export type GalleryImageLocation = {
@@ -143,6 +145,7 @@ export async function getGalleryImages(
     url.searchParams.set("folder", folder);
   }
   url.searchParams.set("refresh", crypto.randomUUID());
+  url.searchParams.set("dimensions", "1");
 
   const response = await fetch(url, {
     cache: "no-store",
@@ -156,6 +159,12 @@ export async function getGalleryImages(
   const data = (await response.json()) as ImagesResponse;
   const images = (data.images ?? []).flatMap((image) => {
     const src = image.src?.trim();
+    const width = Number.isInteger(image.width) && Number(image.width) > 0
+      ? Number(image.width)
+      : undefined;
+    const height = Number.isInteger(image.height) && Number(image.height) > 0
+      ? Number(image.height)
+      : undefined;
 
     if (!src) {
       return [];
@@ -166,6 +175,7 @@ export async function getGalleryImages(
         id: image.id?.trim() || src,
         src,
         alt: image.alt?.trim() || "Gallery image",
+        ...(width && height ? { width, height } : {}),
       },
     ];
   });

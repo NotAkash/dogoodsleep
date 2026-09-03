@@ -18,18 +18,45 @@ const objects = [
 
 function object(key, mtime) {
   return {
+    etag: `etag-${key}`,
     key,
+    size: 200_000,
     customMetadata: mtime ? { mtime } : undefined,
   };
 }
 
-function mockEnv(listedObjects = objects) {
+function jpeg(width, height) {
+  return Uint8Array.from([
+    0xff, 0xd8,
+    0xff, 0xc0,
+    0x00, 0x11,
+    0x08,
+    (height >> 8) & 0xff,
+    height & 0xff,
+    (width >> 8) & 0xff,
+    width & 0xff,
+    0x03,
+    0x01, 0x11, 0x00,
+    0x02, 0x11, 0x00,
+    0x03, 0x11, 0x00,
+  ]);
+}
+
+function mockEnv(listedObjects = objects, objectBodies = new Map()) {
   const listCalls = [];
+  const getCalls = [];
 
   return {
+    getCalls,
     listCalls,
     env: {
       ARCHIVE_BUCKET: {
+        async get(key, options) {
+          getCalls.push({ key, options });
+          const bytes = objectBodies.get(key);
+
+          return bytes ? { async bytes() { return bytes; } } : null;
+        },
         async list(options) {
           listCalls.push(options);
           return {
@@ -42,12 +69,12 @@ function mockEnv(listedObjects = objects) {
   };
 }
 
-async function request(path, listedObjects = objects, origin) {
-  const { env, listCalls } = mockEnv(listedObjects);
+async function request(path, listedObjects = objects, origin, objectBodies) {
+  const { env, getCalls, listCalls } = mockEnv(listedObjects, objectBodies);
   const response = await worker.fetch(new Request(`https://api.example.test${path}`, {
     headers: origin ? { origin } : undefined,
   }), env);
-  return { response, body: await response.json(), listCalls };
+  return { response, body: await response.json(), getCalls, listCalls };
 }
 
 async function activityRequest(env, feedResponse, origin = "https://dogoodsleep.com") {
@@ -151,6 +178,32 @@ test("allows the production site and this Worker's branch preview origins", asyn
   );
   assert.equal(unrelated.response.headers.get("access-control-allow-origin"), null);
   assert.match(production.response.headers.get("vary"), /Origin/);
+});
+
+test("returns intrinsic JPEG dimensions only when the client requests them", async () => {
+  const key = "2026/Winter26/March/IMG_4666.jpg";
+  const listedObjects = [object(key, "2026-03-10T12:00:00Z")];
+  const objectBodies = new Map([[key, jpeg(2048, 1365)]]);
+  const withoutDimensions = await request("/images?limit=1", listedObjects);
+  const withDimensions = await request(
+    "/images?limit=1&dimensions=1",
+    listedObjects,
+    undefined,
+    objectBodies,
+  );
+
+  assert.equal(withoutDimensions.getCalls.length, 0);
+  assert.deepEqual(withDimensions.getCalls, [{
+    key,
+    options: { range: { offset: 0, length: 96 * 1024 } },
+  }]);
+  assert.deepEqual(withDimensions.body.images[0], {
+    id: key,
+    src: `https://images.dogoodsleep.com/${key}`,
+    alt: "IMG 4666",
+    width: 2048,
+    height: 1365,
+  });
 });
 
 test("unfiltered results include every image newest first by mtime", async () => {

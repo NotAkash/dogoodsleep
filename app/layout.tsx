@@ -25,6 +25,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://api.dogoodsleep.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://images.dogoodsleep.com" />
+      </head>
       <body className={inter.variable}>
         <MainNav />
         {children}

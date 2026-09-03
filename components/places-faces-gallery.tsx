@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  CRITICAL_GALLERY_IMAGE_COUNT,
+  prepareCriticalGalleryImages,
+} from "@/data/gallery-image-loading";
+import {
   getArchiveFolderName,
   getGalleryImageLocation,
   getGalleryImages,
@@ -176,6 +180,9 @@ export function PlacesFacesGallery({
   const [pendingFolder, setPendingFolder] =
     useState<string | null | undefined>(undefined);
   const [hasCommittedResult, setHasCommittedResult] = useState(false);
+  const [criticalImageIds, setCriticalImageIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [scrollCommitId, setScrollCommitId] = useState<number | null>(null);
   const [initialSelectionPending, setInitialSelectionPending] = useState(true);
   const [mobileIndexOpen, setMobileIndexOpen] = useState(false);
@@ -229,47 +236,61 @@ export function PlacesFacesGallery({
           controller.signal,
         );
 
+        if (!isMounted || request.id !== latestRequestIdRef.current) {
+          return;
+        }
+
+        if (!initialSelectionResolvedRef.current) {
+          const defaultFolder = nextPage.folders[0];
+
+          initialSelectionResolvedRef.current = true;
+          setArchiveTotal(nextPage.total);
+
+          if (defaultFolder) {
+            keepLoading = true;
+            startArchiveRequest(
+              defaultFolder.id,
+              1,
+              "initial",
+              false,
+            );
+            return;
+          }
+        }
+
+        const nextCriticalImageIds = await prepareCriticalGalleryImages(
+          nextPage.images,
+          {
+            columnCount: window.matchMedia("(min-width: 640px)").matches ? 3 : 2,
+            signal: controller.signal,
+          },
+        );
+
         if (
-          isMounted
-          && request.id === latestRequestIdRef.current
+          !isMounted
+          || controller.signal.aborted
+          || request.id !== latestRequestIdRef.current
         ) {
+          return;
+        }
 
-          if (!initialSelectionResolvedRef.current) {
-            const defaultFolder = nextPage.folders[0];
+        if (request.reason === "filter") {
+          setScrollCommitId(request.id);
+        }
 
-            initialSelectionResolvedRef.current = true;
-            setArchiveTotal(nextPage.total);
-
-            if (defaultFolder) {
-              keepLoading = true;
-              startArchiveRequest(
-                defaultFolder.id,
-                1,
-                "initial",
-                false,
-              );
-              return;
-            }
-          }
-
-          if (request.reason === "filter") {
-            setScrollCommitId(request.id);
-          }
-
-          setFolders(nextPage.folders);
-          setImages(nextPage.images);
-          setSelectedFolder(request.folder);
-          setPage(nextPage.page);
-          setTotal(nextPage.total);
-          setTotalPages(nextPage.totalPages);
-          setHasPaginationMeta(nextPage.hasPaginationMeta);
-          setHasCommittedResult(true);
-          setInitialSelectionPending(false);
-          setPendingFolder(undefined);
-          if (request.folder === null) {
-            setArchiveTotal(nextPage.total);
-          }
-
+        setFolders(nextPage.folders);
+        setImages(nextPage.images);
+        setCriticalImageIds(nextCriticalImageIds);
+        setSelectedFolder(request.folder);
+        setPage(nextPage.page);
+        setTotal(nextPage.total);
+        setTotalPages(nextPage.totalPages);
+        setHasPaginationMeta(nextPage.hasPaginationMeta);
+        setHasCommittedResult(true);
+        setInitialSelectionPending(false);
+        setPendingFolder(undefined);
+        if (request.folder === null) {
+          setArchiveTotal(nextPage.total);
         }
       } catch (loadError) {
         if (
@@ -487,7 +508,7 @@ export function PlacesFacesGallery({
     : Math.max(1, visibleFrameHigh - images.length + 1);
   const frameDigits = Math.max(3, String(Math.max(total, images.length)).length);
   const loadingFrames = Array.from(
-    { length: IMAGES_PER_PAGE },
+    { length: CRITICAL_GALLERY_IMAGE_COUNT },
     (_, index) => index,
   );
 
@@ -500,7 +521,7 @@ export function PlacesFacesGallery({
   const getFrameLabel = (index: number) => {
     const frameNumber = formatFrameNumber(getFrameNumber(index));
 
-    return hasPaginationMeta ? `Frame ${frameNumber}` : `Set frame ${frameNumber}`;
+    return `Photograph ${frameNumber}`;
   };
 
   const errorDetail =
@@ -529,9 +550,6 @@ export function PlacesFacesGallery({
       return (currentIndex + 1) % images.length;
     });
   };
-
-  const getImageKey = (image: GalleryImage, index: number) =>
-    `${selectedFolder ?? "all"}-${page}-${image.id}-${index}`;
 
   const displayedFolderName = getArchiveFolderName(selectedFolder);
   const pendingFolderName = pendingFolder !== undefined
@@ -607,53 +625,26 @@ export function PlacesFacesGallery({
         inert={activeImage ? true : undefined}
       >
         <header className="archive-folio mb-14 sm:mb-20 lg:mb-24">
-          <div className="grid gap-10 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:gap-16">
+          <div className="grid gap-8 sm:gap-10">
             <div>
-              <p className="archive-kicker text-[10px] font-medium uppercase tracking-[0.28em] text-[var(--muted)]">
-                Places &amp; Faces · Newest first
-              </p>
               <h1
                 id="archive-title"
-                className="archive-title mt-5 text-5xl leading-[0.84] text-[var(--ink)] sm:text-7xl lg:text-[8.5rem]"
+                className="archive-title text-5xl leading-[0.84] text-[var(--ink)] sm:text-7xl lg:text-[8.5rem]"
               >
                 Places &amp; Faces
               </h1>
             </div>
 
             <dl
-              className="archive-folio-meta grid grid-cols-3 gap-x-8 gap-y-4 text-[9px] uppercase tracking-[0.2em] text-[var(--muted)] sm:text-right sm:text-[10px]"
+              className="archive-folio-meta grid w-fit grid-cols-1 text-left text-[9px] uppercase tracking-[0.2em] text-[var(--muted)] sm:text-[10px]"
               aria-live="polite"
             >
-              <div>
-                <dt>Set</dt>
-                <dd className="mt-1.5 font-medium text-[var(--ink)]">
-                  {blockingLoading
-                    ? "—"
-                    : hasPaginationMeta
-                      ? `${String(page).padStart(2, "0")} / ${String(totalPages).padStart(2, "0")}`
-                      : "Current"}
-                </dd>
-              </div>
-              <div>
-                <dt>Frames</dt>
-                <dd className="mt-1.5 font-medium text-[var(--ink)]">
-                  {blockingLoading
-                    ? "—"
-                    : images.length === 0
-                      ? "0"
-                      : hasPaginationMeta
-                        ? `${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)}`
-                        : String(images.length)}
-                </dd>
-              </div>
               <div>
                 <dt>Collection</dt>
                 <dd className="mt-1.5 font-medium text-[var(--ink)]">
                   {blockingLoading
                     ? "Reading"
-                    : hasPaginationMeta
-                      ? `${total} in set`
-                      : `${images.length} loaded`}
+                    : `${hasPaginationMeta ? total : images.length} photographs`}
                 </dd>
               </div>
             </dl>
@@ -701,15 +692,6 @@ export function PlacesFacesGallery({
             <div className="archive-index-sticky">
               <div className="archive-index-heading">
                 <p>Places &amp; Faces index</p>
-                <p>
-                  {pendingFolder !== undefined
-                    ? "Loading set"
-                    : initialSelectionPending
-                      ? "Choosing set"
-                    : selectedFolder
-                      ? "Filtered set"
-                      : "Complete set"}
-                </p>
               </div>
               <ArchiveIndex
                 archiveTotal={archiveTotal}
@@ -751,9 +733,9 @@ export function PlacesFacesGallery({
             className="archive-loading"
             role="status"
             aria-live="polite"
-            aria-label="Loading twenty Places & Faces photographs"
+            aria-label="Loading the first Places & Faces photographs"
           >
-            <span className="sr-only">Loading twenty Places &amp; Faces photographs.</span>
+            <span className="sr-only">Loading the first Places &amp; Faces photographs.</span>
             <div
               className="columns-2 gap-2.5 sm:columns-3 sm:gap-10 lg:gap-12"
               aria-hidden="true"
@@ -761,7 +743,7 @@ export function PlacesFacesGallery({
               {loadingFrames.map((frame) => (
                 <div
                   key={`archive-loading-frame-${frame}`}
-                  className="mb-2.5 aspect-[4/5] break-inside-avoid bg-[var(--surface)] motion-safe:animate-pulse sm:mb-10 lg:mb-12 motion-reduce:animate-none"
+                  className="mb-2.5 aspect-[3/2] break-inside-avoid bg-[var(--surface)] motion-safe:animate-pulse sm:mb-10 lg:mb-12 motion-reduce:animate-none"
                 />
               ))}
             </div>
@@ -772,9 +754,6 @@ export function PlacesFacesGallery({
               ref={galleryStartRef}
               className="archive-collection-context"
             >
-              <p className="archive-collection-kicker">
-                {selectedFolder ? "Current folder" : "Current set"}
-              </p>
               <h2 className="archive-collection-title">
                 {displayedFolderName}
               </h2>
@@ -812,7 +791,7 @@ export function PlacesFacesGallery({
                   role="status"
                 >
                   <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-[var(--muted)]">
-                    Empty set
+                    Empty collection
                   </p>
                   <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[var(--ink)]">
                     {selectedFolder
@@ -853,11 +832,11 @@ export function PlacesFacesGallery({
                   <div className="archive-register mb-5 flex items-center justify-between gap-4 text-[9px] uppercase tracking-[0.22em] text-[var(--muted)] sm:mb-8 sm:text-[10px]">
                     <p>
                       {hasPaginationMeta
-                        ? `${images.length} frames · ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)}`
-                        : `${images.length} frames in current set`}
+                        ? `${images.length} photographs · ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)}`
+                        : `${images.length} photographs`}
                     </p>
                     <p className="hidden sm:block">
-                      Select a frame to inspect
+                      Select a photograph to inspect
                     </p>
                   </div>
 
@@ -870,7 +849,7 @@ export function PlacesFacesGallery({
 
                       return (
                         <button
-                          key={getImageKey(image, index)}
+                          key={image.id}
                           type="button"
                           onClick={(event) => {
                             galleryTriggerRef.current = event.currentTarget;
@@ -879,20 +858,22 @@ export function PlacesFacesGallery({
                           className="archive-frame group mb-2.5 block w-full break-inside-avoid text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)] sm:mb-10 lg:mb-12"
                           aria-label={`${image.alt}. Open ${frameLabel.toLowerCase()}.`}
                         >
-                          <span className="relative block overflow-hidden bg-[var(--surface)]">
+                          <span
+                            className="relative block overflow-hidden bg-[var(--surface)]"
+                            style={image.width && image.height
+                              ? { aspectRatio: `${image.width} / ${image.height}` }
+                              : undefined}
+                          >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={image.src}
                               alt=""
-                              className="block h-auto w-full motion-safe:transition-opacity motion-safe:duration-300 motion-reduce:transition-none"
-                              data-loaded="false"
-                              loading="lazy"
-                              onError={(event) => {
-                                event.currentTarget.dataset.loaded = "true";
-                              }}
-                              onLoad={(event) => {
-                                event.currentTarget.dataset.loaded = "true";
-                              }}
+                              className="block h-auto w-full"
+                              width={image.width}
+                              height={image.height}
+                              loading={criticalImageIds.has(image.id) ? "eager" : "lazy"}
+                              fetchPriority={criticalImageIds.has(image.id) ? "high" : "auto"}
+                              decoding="async"
                             />
                           </span>
                         </button>
@@ -903,8 +884,8 @@ export function PlacesFacesGallery({
                   <footer className="archive-pagination -mx-5 mt-16 flex flex-col gap-7 px-5 py-8 sm:-mx-10 sm:mt-24 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-10 lg:-mx-12 lg:px-12">
               <p className="text-[10px] uppercase tracking-[0.22em] text-[color:rgba(237,240,235,0.5)]">
                 {hasPaginationMeta
-                  ? `Frames ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)} of ${total}`
-                  : `${images.length} frames loaded · pagination unavailable`}
+                  ? `Photographs ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)} of ${total}`
+                  : `${images.length} photographs · pagination unavailable`}
               </p>
 
               <nav
@@ -929,7 +910,7 @@ export function PlacesFacesGallery({
                 <span className="min-w-20 text-center text-[9px] uppercase tracking-[0.2em] text-[color:rgba(237,240,235,0.5)] sm:min-w-24">
                   {hasPaginationMeta
                     ? `${String(page).padStart(2, "0")} / ${String(totalPages).padStart(2, "0")}`
-                    : "One set"}
+                    : "One page"}
                 </span>
                 <button
                   type="button"
@@ -1034,7 +1015,7 @@ export function PlacesFacesGallery({
               onClick={handlePrevious}
               disabled={images.length < 2}
               className="archive-viewer-control min-h-11 justify-self-start border border-[color:rgba(237,240,235,0.2)] px-3 py-2 text-[10px] font-medium uppercase tracking-[0.18em] text-[color:rgba(237,240,235,0.7)] hover:bg-[var(--paper)] hover:text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-30 sm:px-5"
-              aria-label="View previous frame"
+              aria-label="View previous photograph"
             >
               ← Prev
             </button>
@@ -1051,7 +1032,7 @@ export function PlacesFacesGallery({
               onClick={handleNext}
               disabled={images.length < 2}
               className="archive-viewer-control min-h-11 justify-self-end border border-[color:rgba(237,240,235,0.2)] px-3 py-2 text-[10px] font-medium uppercase tracking-[0.18em] text-[color:rgba(237,240,235,0.7)] hover:bg-[var(--paper)] hover:text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--paper)] disabled:cursor-not-allowed disabled:opacity-30 sm:px-5"
-              aria-label="View next frame"
+              aria-label="View next photograph"
             >
               Next →
             </button>

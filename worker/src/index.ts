@@ -5,12 +5,27 @@ const STORYGRAPH_ORIGIN = "https://app.thestorygraph.com";
 const SITE_PREVIEW_ORIGIN = /^https:\/\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-dogoodsleep\.dogoodsleep\.workers\.dev$/;
 const ACTIVITY_CACHE_TTL_SECONDS = 30 * 60;
 const ACTIVITY_CACHE_VERSION = "2";
+const IMAGE_DIMENSION_RANGE_BYTES = 96 * 1024;
+const IMAGE_DIMENSION_CACHE_TTL_SECONDS = 365 * 24 * 60 * 60;
 const MAX_RSS_BYTES = 512 * 1024;
+const JPEG_START_OF_FRAME_MARKERS = new Set([
+  0xc0, 0xc1, 0xc2, 0xc3,
+  0xc5, 0xc6, 0xc7,
+  0xc9, 0xca, 0xcb,
+  0xcd, 0xce, 0xcf,
+]);
 
 type GalleryImage = {
   id: string;
   src: string;
   alt: string;
+  width?: number;
+  height?: number;
+};
+
+type ImageDimensions = {
+  width: number;
+  height: number;
 };
 
 type ArchiveFolder = {
@@ -60,6 +75,156 @@ function withCors(response: Response, request: Request): Response {
     statusText: response.statusText,
     headers,
   });
+}
+
+function validDimensions(value: unknown): value is ImageDimensions {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const dimensions = value as Partial<ImageDimensions>;
+
+  return Number.isInteger(dimensions.width)
+    && Number(dimensions.width) > 0
+    && Number.isInteger(dimensions.height)
+    && Number(dimensions.height) > 0;
+}
+
+function jpegDimensions(bytes: Uint8Array): ImageDimensions | undefined {
+  if (bytes.length < 10 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
+    return undefined;
+  }
+
+  let offset = 2;
+
+  while (offset + 8 < bytes.length) {
+    if (bytes[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+
+    while (offset < bytes.length && bytes[offset] === 0xff) {
+      offset += 1;
+    }
+
+    const marker = bytes[offset];
+    offset += 1;
+
+    if (marker === 0xd9 || marker === 0xda) {
+      return undefined;
+    }
+
+    if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+      continue;
+    }
+
+    if (offset + 1 >= bytes.length) {
+      return undefined;
+    }
+
+    const segmentLength = (bytes[offset] << 8) | bytes[offset + 1];
+
+    if (segmentLength < 2 || offset + segmentLength > bytes.length) {
+      return undefined;
+    }
+
+    if (JPEG_START_OF_FRAME_MARKERS.has(marker)) {
+      const height = (bytes[offset + 3] << 8) | bytes[offset + 4];
+      const width = (bytes[offset + 5] << 8) | bytes[offset + 6];
+
+      return width > 0 && height > 0 ? { width, height } : undefined;
+    }
+
+    offset += segmentLength;
+  }
+
+  return undefined;
+}
+
+function dimensionsFromMetadata(object: R2Object): ImageDimensions | undefined {
+  const width = Number(object.customMetadata?.width);
+  const height = Number(object.customMetadata?.height);
+
+  return validDimensions({ width, height }) ? { width, height } : undefined;
+}
+
+function dimensionCacheKey(object: R2Object): Request {
+  const url = new URL("https://api.dogoodsleep.com/__image-dimensions");
+  url.searchParams.set("key", object.key);
+  url.searchParams.set("etag", object.etag);
+
+  return new Request(url);
+}
+
+async function imageDimensions(
+  bucket: R2Bucket,
+  object: R2Object,
+  context?: ExecutionContext,
+): Promise<ImageDimensions | undefined> {
+  const metadataDimensions = dimensionsFromMetadata(object);
+
+  if (metadataDimensions) {
+    return metadataDimensions;
+  }
+
+  if (!/\.jpe?g$/i.test(object.key)) {
+    return undefined;
+  }
+
+  const cache = typeof caches === "undefined" ? undefined : caches.default;
+  const cacheKey = dimensionCacheKey(object);
+
+  if (cache) {
+    try {
+      const cached = await cache.match(cacheKey);
+
+      if (cached) {
+        const dimensions = await cached.json();
+
+        if (validDimensions(dimensions)) {
+          return dimensions;
+        }
+      }
+    } catch {
+      // A metadata cache miss must not prevent the photograph from loading.
+    }
+  }
+
+  try {
+    const rangeLength = Math.min(
+      IMAGE_DIMENSION_RANGE_BYTES,
+      Math.max(1, object.size),
+    );
+    const partialObject = await bucket.get(object.key, {
+      range: { offset: 0, length: rangeLength },
+    });
+    const dimensions = partialObject
+      ? jpegDimensions(await partialObject.bytes())
+      : undefined;
+
+    if (dimensions && cache) {
+      const cacheWrite = cache
+        .put(cacheKey, new Response(JSON.stringify(dimensions), {
+          headers: {
+            "cache-control": `public, max-age=${IMAGE_DIMENSION_CACHE_TTL_SECONDS}`,
+            "content-type": "application/json; charset=utf-8",
+          },
+        }))
+        .catch(() => {
+          // The dimensions are still valid for this response if cache storage fails.
+        });
+
+      if (context) {
+        context.waitUntil(cacheWrite);
+      } else {
+        await cacheWrite;
+      }
+    }
+
+    return dimensions;
+  } catch {
+    return undefined;
+  }
 }
 
 type DiaryEntry = {
@@ -540,7 +705,11 @@ function folderFilter(searchParams: URLSearchParams): FolderFilter {
   return malformed ? { kind: "invalid" } : { kind: "valid", path };
 }
 
-async function handleRequest(request: Request, env: Env): Promise<Response> {
+async function handleRequest(
+  request: Request,
+  env: Env,
+  context?: ExecutionContext,
+): Promise<Response> {
   const url = new URL(request.url);
 
   if (request.method === "OPTIONS") {
@@ -613,23 +782,34 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     : positiveInteger(requestedPage, 1);
   const safePage = Math.min(page, totalPages);
   const startIndex = (safePage - 1) * limit;
-  const images: GalleryImage[] = orderedObjects
-    .slice(startIndex, startIndex + limit)
-    .map((object) => ({
+  const pageObjects = orderedObjects.slice(startIndex, startIndex + limit);
+  const includeDimensions = url.searchParams.get("dimensions") === "1";
+  const images: GalleryImage[] = await Promise.all(pageObjects.map(async (object) => {
+    const dimensions = includeDimensions
+      ? await imageDimensions(env.ARCHIVE_BUCKET, object, context)
+      : undefined;
+
+    return {
       id: object.key,
       src: imageUrl(object.key),
       alt: toAlt(object.key),
-    }));
+      ...(dimensions ?? {}),
+    };
+  }));
 
   return json({ images, page: safePage, total, totalPages, folders });
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(
+    request: Request,
+    env: Env,
+    context: ExecutionContext,
+  ): Promise<Response> {
     let response: Response;
 
     try {
-      response = await handleRequest(request, env);
+      response = await handleRequest(request, env, context);
     } catch (error) {
       console.error(JSON.stringify({
         message: "archive API request failed",
