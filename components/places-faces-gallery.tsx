@@ -13,6 +13,7 @@ import {
   type GalleryImage,
   type GalleryPageRequest,
 } from "@/data/remote-gallery";
+import { startInitialGallerySelection } from "@/data/gallery-initial-selection";
 
 type PlacesFacesGalleryProps = {
   imageApiUrl: string;
@@ -241,19 +242,25 @@ export function PlacesFacesGallery({
         }
 
         if (!initialSelectionResolvedRef.current) {
-          const defaultFolder = nextPage.folders[0];
-
           initialSelectionResolvedRef.current = true;
-          setArchiveTotal(nextPage.total);
+          const startedDefaultRequest = startInitialGallerySelection(
+            nextPage,
+            ({ archiveTotal: nextArchiveTotal, folders: nextFolders }) => {
+              setArchiveTotal(nextArchiveTotal);
+              setFolders(nextFolders);
+            },
+            (defaultFolder) => {
+              startArchiveRequest(
+                defaultFolder.id,
+                1,
+                "initial",
+                false,
+              );
+            },
+          );
 
-          if (defaultFolder) {
+          if (startedDefaultRequest) {
             keepLoading = true;
-            startArchiveRequest(
-              defaultFolder.id,
-              1,
-              "initial",
-              false,
-            );
             return;
           }
         }
