@@ -614,6 +614,55 @@ button {
   scroll-margin-top: 6rem;
 }
 
+.archive-collection-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.archive-copy-button {
+  min-height: 2.75rem;
+  border: 1px solid var(--rule);
+  padding: 0.65rem 0.9rem;
+  font-size: 0.65rem;
+  color: var(--ink);
+}
+
+.archive-copy-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.archive-copy-button:focus-visible,
+.archive-manual-copy input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.archive-copy-feedback,
+.archive-manual-copy {
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.archive-copy-feedback:empty {
+  margin: 0;
+}
+
+.archive-manual-copy input {
+  display: block;
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: 0.4rem;
+  padding: 0.5rem;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
+}
+
 .archive-collection-status {
   margin: 0;
   color: var(--muted);
@@ -625,6 +674,8 @@ button {
 
 .archive-collection-title {
   margin: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   color: var(--ink);
   font-size: clamp(1.65rem, 3vw, 2.5rem);
   font-weight: 570;
@@ -643,6 +694,7 @@ button {
 
 .archive-transition-error {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;

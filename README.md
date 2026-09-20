@@ -17,6 +17,23 @@ npm run dev
 
 ## Notes
 
+### Shareable archive folders
+
+`/places-faces` opens All photos. A `folder` query parameter opens a full folder
+path, for example `/places-faces?folder=2026%2FSummer26%2FMayKingston`.
+Copy link shares the selected collection; page numbers and the photo viewer are
+not included. Folder clicks update the address after loading succeeds, and
+Back/Forward loads the destination without reloading the document. Unavailable
+folders show recovery actions instead of silently opening a different folder.
+
+Run `npm run test:archive` for archive unit tests. For browser checks, install
+Chromium once with `npx playwright install chromium`, then run
+`npm run test:archive:browser`. The browser suite starts its own local server on
+port 3100 and uses controlled image-service responses to check history, loading,
+errors, copying, and mobile navigation without modifying the real archive.
+
+### Image service
+
 - `IMAGES_API_URL` is the protected base URL for the deployed image service used by `/places-faces`.
 - Set it in Cloudflare for production and in `.env.local` for local development so the page can fetch ordered image pages from the worker.
 - Journal entries live in `content/journal/*.md` with simple frontmatter: `title`, `date`, and `summary`.
