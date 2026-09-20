@@ -2,6 +2,8 @@ export type GalleryImage = {
   id: string;
   src: string;
   alt: string;
+  width?: number;
+  height?: number;
 };
 
 export type GalleryImageLocation = {
@@ -27,6 +29,16 @@ export type GalleryPage = {
 };
 
 export type GalleryPageRequest = number | "last";
+
+export function getArchiveFolderName(folder: string | null | undefined): string {
+  if (!folder) {
+    return "All photos";
+  }
+
+  const segments = folder.split("/").filter(Boolean);
+
+  return segments.at(-1) ?? "All photos";
+}
 
 export function getGalleryImageLocation(key: string): GalleryImageLocation {
   const segments = key.split("/");
@@ -118,6 +130,7 @@ export async function getGalleryImages(
   page: GalleryPageRequest = 1,
   limit = 20,
   folder?: string,
+  signal?: AbortSignal,
 ): Promise<GalleryPage> {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
 
@@ -132,9 +145,11 @@ export async function getGalleryImages(
     url.searchParams.set("folder", folder);
   }
   url.searchParams.set("refresh", crypto.randomUUID());
+  url.searchParams.set("dimensions", "1");
 
   const response = await fetch(url, {
     cache: "no-store",
+    signal,
   });
 
   if (!response.ok) {
@@ -144,6 +159,12 @@ export async function getGalleryImages(
   const data = (await response.json()) as ImagesResponse;
   const images = (data.images ?? []).flatMap((image) => {
     const src = image.src?.trim();
+    const width = Number.isInteger(image.width) && Number(image.width) > 0
+      ? Number(image.width)
+      : undefined;
+    const height = Number.isInteger(image.height) && Number(image.height) > 0
+      ? Number(image.height)
+      : undefined;
 
     if (!src) {
       return [];
@@ -154,6 +175,7 @@ export async function getGalleryImages(
         id: image.id?.trim() || src,
         src,
         alt: image.alt?.trim() || "Gallery image",
+        ...(width && height ? { width, height } : {}),
       },
     ];
   });
