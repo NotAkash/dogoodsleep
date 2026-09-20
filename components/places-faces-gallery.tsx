@@ -14,13 +14,20 @@ import {
   type GalleryPageRequest,
 } from "@/data/remote-gallery";
 
+import {
+  archiveErrorDetail,
+  archiveFolderUrl,
+  archiveLocationMatches,
+  readArchiveLocation,
+} from "@/data/archive-navigation";
+
 type PlacesFacesGalleryProps = {
   imageApiUrl: string;
 };
 
 const IMAGES_PER_PAGE = 20;
 
-type ArchiveRequestReason = "initial" | "filter" | "page" | "refresh";
+type ArchiveRequestReason = "initial" | "filter" | "history" | "page" | "refresh";
 
 type ArchiveRequest = {
   folder: string | null;
@@ -28,10 +35,11 @@ type ArchiveRequest = {
   page: GalleryPageRequest;
   preserveCurrent: boolean;
   reason: ArchiveRequestReason;
+  validationError: string | null;
 };
 
 type ArchiveIndexProps = {
-  archiveTotal: number;
+  archiveTotal: number | null;
   folders: ArchiveFolder[];
   initialSelectionPending: boolean;
   loading: boolean;
@@ -131,7 +139,7 @@ function ArchiveIndex({
         <span className="archive-folder-count" aria-hidden="true">
           {allPhotosPending
             ? "…"
-            : loading && archiveTotal === 0
+            : archiveTotal === null
               ? "—"
               : archiveTotal}
         </span>
@@ -164,15 +172,9 @@ export function PlacesFacesGallery({
     useState<ArchiveRequest | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [page, setPage] = useState(1);
-  const [request, setRequest] = useState<ArchiveRequest>({
-    folder: null,
-    id: 0,
-    page: 1,
-    preserveCurrent: false,
-    reason: "initial",
-  });
+  const [request, setRequest] = useState<ArchiveRequest | null>(null);
   const [total, setTotal] = useState(0);
-  const [archiveTotal, setArchiveTotal] = useState(0);
+  const [archiveTotal, setArchiveTotal] = useState<number | null>(null);
   const [totalPages, setTotalPages] = useState(1);
   const [hasPaginationMeta, setHasPaginationMeta] = useState(false);
   const [folders, setFolders] = useState<ArchiveFolder[]>([]);
@@ -186,7 +188,10 @@ export function PlacesFacesGallery({
   const [scrollCommitId, setScrollCommitId] = useState<number | null>(null);
   const [initialSelectionPending, setInitialSelectionPending] = useState(true);
   const [mobileIndexOpen, setMobileIndexOpen] = useState(false);
-  const initialSelectionResolvedRef = useRef(false);
+  const hasCommittedResultRef = useRef(false);
+  const [locationHref, setLocationHref] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [manualCopyUrl, setManualCopyUrl] = useState<string | null>(null);
   const latestRequestIdRef = useRef(0);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -199,25 +204,47 @@ export function PlacesFacesGallery({
     requestedPage: GalleryPageRequest,
     reason: ArchiveRequestReason,
     preserveCurrent: boolean,
+    validationError: string | null = null,
   ) => {
     const id = latestRequestIdRef.current + 1;
 
     latestRequestIdRef.current = id;
+    setLoading(true);
+    setError(null);
+    setTransitionError(null);
+    setFailedRequest(null);
+    setCopyFeedback(null);
+    setManualCopyUrl(null);
+    if (reason === "filter" || reason === "history") setPendingFolder(folder);
     setRequest({
       folder,
       id,
       page: requestedPage,
       preserveCurrent,
       reason,
+      validationError,
     });
   }, []);
 
   useEffect(() => {
+    const navigate = (reason: "initial" | "history") => {
+      const href = window.location.href;
+      const destination = readArchiveLocation(href);
+      setLocationHref(href);
+      startArchiveRequest(destination.folder, 1, reason, hasCommittedResultRef.current, destination.error);
+    };
+    navigate("initial");
+    const onPopState = () => navigate("history");
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [startArchiveRequest]);
+
+  useEffect(() => {
+    if (!request) return;
     let isMounted = true;
-    let keepLoading = false;
     const controller = new AbortController();
 
-    async function loadImages() {
+    const loadImages = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -227,6 +254,8 @@ export function PlacesFacesGallery({
         if (!request.preserveCurrent) {
           setImages([]);
         }
+
+        if (request.validationError) throw new Error(request.validationError);
 
         const nextPage = await getGalleryImages(
           imageApiUrl,
@@ -238,24 +267,6 @@ export function PlacesFacesGallery({
 
         if (!isMounted || request.id !== latestRequestIdRef.current) {
           return;
-        }
-
-        if (!initialSelectionResolvedRef.current) {
-          const defaultFolder = nextPage.folders[0];
-
-          initialSelectionResolvedRef.current = true;
-          setArchiveTotal(nextPage.total);
-
-          if (defaultFolder) {
-            keepLoading = true;
-            startArchiveRequest(
-              defaultFolder.id,
-              1,
-              "initial",
-              false,
-            );
-            return;
-          }
         }
 
         const nextCriticalImageIds = await prepareCriticalGalleryImages(
@@ -278,6 +289,13 @@ export function PlacesFacesGallery({
           setScrollCommitId(request.id);
         }
 
+        // Only the latest successful user selection may add a history entry.
+        // Preserve Next's history state when updating its native History API.
+        if (request.reason === "filter" && !archiveLocationMatches(window.location.href, request.folder)) {
+          window.history.pushState(window.history.state, "", archiveFolderUrl(window.location.href, request.folder));
+        }
+        setLocationHref(window.location.href);
+        hasCommittedResultRef.current = true;
         setFolders(nextPage.folders);
         setImages(nextPage.images);
         setCriticalImageIds(nextCriticalImageIds);
@@ -316,13 +334,12 @@ export function PlacesFacesGallery({
       } finally {
         if (
           isMounted
-          && !keepLoading
           && request.id === latestRequestIdRef.current
         ) {
           setLoading(false);
         }
       }
-    }
+    };
 
     void loadImages();
 
@@ -470,7 +487,7 @@ export function PlacesFacesGallery({
 
   useEffect(() => {
     setActiveIndex(null);
-  }, [request.id]);
+  }, [request?.id]);
 
   useEffect(() => {
     if (scrollCommitId === null) {
@@ -524,12 +541,7 @@ export function PlacesFacesGallery({
     return `Photograph ${frameNumber}`;
   };
 
-  const errorDetail =
-    error === "Missing IMAGES_API_URL"
-      ? "The Places & Faces source is not connected in this environment."
-      : error?.startsWith("Image worker request failed:")
-        ? `The Places & Faces service returned ${error.replace("Image worker request failed: ", "status ")}.`
-        : "The Places & Faces service did not return a usable response.";
+  const errorDetail = archiveErrorDetail(error);
 
   const handlePrevious = () => {
     setActiveIndex((currentIndex) => {
@@ -553,14 +565,14 @@ export function PlacesFacesGallery({
 
   const displayedFolderName = getArchiveFolderName(selectedFolder);
   const pendingFolderName = pendingFolder !== undefined
-    ? getArchiveFolderName(pendingFolder)
+    ? request?.validationError ? "the requested folder" : getArchiveFolderName(pendingFolder)
     : null;
-  const failedFolderName = failedRequest?.reason === "filter"
-    ? getArchiveFolderName(failedRequest.folder)
+  const failedFolderName = failedRequest
+    ? failedRequest.validationError ? "The requested folder" : getArchiveFolderName(failedRequest.folder)
     : null;
   const isFilterPending = Boolean(
     loading
-    && request.reason === "filter"
+    && (request?.reason === "filter" || request?.reason === "history")
     && request.preserveCurrent
     && pendingFolder !== undefined,
   );
@@ -571,15 +583,12 @@ export function PlacesFacesGallery({
       return;
     }
 
-    if (failedRequest.reason === "filter") {
-      setPendingFolder(failedRequest.folder);
-    }
-
     startArchiveRequest(
       failedRequest.folder,
       failedRequest.page,
       failedRequest.reason,
       failedRequest.preserveCurrent,
+      failedRequest.validationError,
     );
   };
 
@@ -587,10 +596,6 @@ export function PlacesFacesGallery({
     folder: string | null,
     hasChildren = false,
   ) => {
-    if (initialSelectionPending) {
-      initialSelectionResolvedRef.current = true;
-    }
-
     if (mobileIndexOpen && !hasChildren) {
       setMobileIndexOpen(false);
       window.requestAnimationFrame(() => {
@@ -602,7 +607,9 @@ export function PlacesFacesGallery({
       return;
     }
 
-    if (pendingFolder === undefined && folder === selectedFolder) {
+    if (pendingFolder === undefined && folder === selectedFolder
+      && hasCommittedResult && !failedRequest
+      && archiveLocationMatches(window.location.href, folder)) {
       return;
     }
 
@@ -615,6 +622,26 @@ export function PlacesFacesGallery({
       "filter",
       hasCommittedResult,
     );
+  };
+
+  const locationMismatch = Boolean(locationHref && !archiveLocationMatches(locationHref, selectedFolder));
+  const unresolvedHistory = Boolean(transitionError && locationMismatch);
+  const copyDisabled = loading || !hasCommittedResult || !locationHref || locationMismatch;
+
+  const copyFolderLink = async () => {
+    if (copyDisabled) return;
+    const requestId = latestRequestIdRef.current;
+    const url = archiveFolderUrl(window.location.href, selectedFolder);
+    try {
+      await navigator.clipboard.writeText(url);
+      if (requestId !== latestRequestIdRef.current) return;
+      setCopyFeedback("Link copied");
+      setManualCopyUrl(null);
+    } catch {
+      if (requestId !== latestRequestIdRef.current) return;
+      setCopyFeedback("Could not copy the link. Select and copy it below.");
+      setManualCopyUrl(url);
+    }
   };
 
   return (
@@ -727,6 +754,10 @@ export function PlacesFacesGallery({
             >
               Retry Places &amp; Faces
             </button>
+            <button type="button" onClick={() => handleFolderSelect(null)}
+              className="archive-copy-button ml-3">
+              All photos
+            </button>
           </div>
         ) : blockingLoading ? (
           <div
@@ -754,9 +785,20 @@ export function PlacesFacesGallery({
               ref={galleryStartRef}
               className="archive-collection-context"
             >
-              <h2 className="archive-collection-title">
-                {displayedFolderName}
-              </h2>
+              <div className="archive-collection-heading">
+                <h2 className="archive-collection-title">{displayedFolderName}</h2>
+                <button type="button" className="archive-copy-button"
+                  disabled={Boolean(copyDisabled)} onClick={copyFolderLink}>
+                  Copy link
+                </button>
+              </div>
+              <p className="archive-copy-feedback" role="status" aria-live="polite">{copyFeedback}</p>
+              {manualCopyUrl ? (
+                <label className="archive-manual-copy">
+                  Collection link
+                  <input readOnly value={manualCopyUrl} onFocus={(event) => event.currentTarget.select()} />
+                </label>
+              ) : null}
               <p
                 className="archive-collection-status"
                 aria-live="polite"
@@ -771,19 +813,20 @@ export function PlacesFacesGallery({
             {transitionError && failedFolderName ? (
               <div className="archive-transition-error" role="alert">
                 <p>
-                  {failedFolderName} could not be loaded. The current folder
-                  remains open.
+                  {failedFolderName} could not be loaded. Still showing {displayedFolderName}.
+                  {" "}{archiveErrorDetail(transitionError)}
                 </p>
                 <button type="button" onClick={retryFailedRequest}>
                   Retry {failedFolderName}
                 </button>
+                <button type="button" onClick={() => handleFolderSelect(null)}>All photos</button>
               </div>
             ) : null}
 
             <div
               className="archive-gallery-set"
               data-pending={isFilterPending ? "true" : undefined}
-              inert={isFilterPending ? true : undefined}
+              inert={isFilterPending || unresolvedHistory ? true : undefined}
             >
               {images.length === 0 ? (
                 <div
