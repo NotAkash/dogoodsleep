@@ -14,7 +14,7 @@ export default function HomePage() {
     const latestDrafts = journalEntries.slice(0, 2);
 
     return (
-        <main className="home-page">
+        <main id="main-content" className="home-page">
             <section className="home-hero">
                 <div className="home-intro">
                     <p className="eyebrow">Akash · Toronto · Places & Faces</p>
@@ -32,15 +32,14 @@ export default function HomePage() {
                     </div>
 
                     <div className="home-index" aria-label="Latest drafts">
-                        {latestDrafts.map((entry, index) => (
+                        {latestDrafts.map((entry) => (
                             <Link
                                 key={entry.slug}
                                 href={`/journal/${entry.slug}`}
                                 aria-label={`${entry.title}: ${entry.summary}`}
                             >
-                                <span>
-                                    {String(journalEntries.length - index).padStart(2, "0")}
-                                </span>
+                                <span className="home-draft-date">{entry.date}</span>
+                                <h2>{entry.title}</h2>
                                 <p>{entry.summary}</p>
                             </Link>
                         ))}
@@ -50,45 +49,15 @@ export default function HomePage() {
                 <HomeArchivePreview imageApiUrl={imageApiUrl} />
             </section>
 
-            <section className="home-now" aria-labelledby="home-now-title">
-                <div className="home-now-meta">
-                    <p className="eyebrow">{homeContent.rightNowLabel}</p>
-                    {homeContent.updated ? <p>{homeContent.updated}</p> : null}
-                </div>
-                <h2 id="home-now-title">{homeContent.headline}</h2>
-                <dl className="home-now-list">
-                    <HomeNowActivity
-                        activityApiUrl={
-                            process.env.NEXT_PUBLIC_ACTIVITY_API_URL
-                            ?? "https://api.dogoodsleep.com"
-                        }
-                    />
-                    {homeContent.statusItems.map((item) => (
-                        <div key={item.label}>
-                            <dt>{item.label}</dt>
-                            <dd>
-                                {item.url ? (
-                                    <a
-                                        href={item.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        aria-label={`${item.label}: ${item.value} (opens in a new tab)`}
-                                    >
-                                        {item.value} <span aria-hidden="true">↗</span>
-                                    </a>
-                                ) : item.value}
-                            </dd>
-                        </div>
-                    ))}
-                </dl>
+            <section className="home-now" aria-label="Reading, watching and building">
+                <HomeNowActivity
+                    activityApiUrl={process.env.NEXT_PUBLIC_ACTIVITY_API_URL ?? "https://api.dogoodsleep.com"}
+                    statusItems={homeContent.statusItems}
+                />
             </section>
 
             <section className="home-links" aria-labelledby="home-links-title">
-                <header className="home-links-header">
-                    <p className="eyebrow">{homeContent.linksLabel}</p>
-                    <h2 id="home-links-title">{homeContent.linksHeading}</h2>
-                    <p>{homeContent.linksIntro}</p>
-                </header>
+                <h2 id="home-links-title">{homeContent.linksLabel}</h2>
 
                 {homeContent.externalLinks.length > 0 ? (
                     <ol className="home-links-list">

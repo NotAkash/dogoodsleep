@@ -2,7 +2,7 @@
 
 30 October 2026 · Initiative Shaper / Map → Ready
 
-Execution update, 31 October: S0 is complete. [Add shareable photo archive folders](https://github.com/NotAkash/dogoodsleep/pull/7) is merged into `master`. The design preparation is isolated on `redesign-redo`. Website redesign implementation has not started.
+Execution update, 31 October: S0 is complete. [Add shareable photo archive folders](https://github.com/NotAkash/dogoodsleep/pull/7) is merged into `master`. The design preparation is isolated on `redesign-redo`. Implementation update: S1–S3 are now implemented on this branch, and local S4 checks passed. See [implementation and verification](2026-10-31-redesign-verification.md) for results and the live-service/Figma verification limits. The story text below records the original approved handoff.
 
 ## Decision record
 

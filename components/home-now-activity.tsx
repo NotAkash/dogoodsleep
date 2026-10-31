@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { HomeStatusItem } from "@/data/home";
 
 const DEFAULT_STORYGRAPH_URL = "https://app.thestorygraph.com/";
 const DEFAULT_LETTERBOXD_URL = "https://letterboxd.com/";
@@ -152,7 +153,21 @@ function normalizeActivity(value: unknown): Activity {
   };
 }
 
-export function HomeNowActivity({ activityApiUrl }: { activityApiUrl: string }) {
+function MoviePoster({ src }: { src?: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return <span className="letterboxd-card-poster letterboxd-card-poster--missing" aria-hidden="true">Poster unavailable</span>;
+  }
+  // Letterboxd supplies the public poster URL in its RSS feed.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img className="letterboxd-card-poster" src={src} alt="" loading="lazy"
+    decoding="async" onError={() => setFailed(true)} />;
+}
+
+export function HomeNowActivity({ activityApiUrl, statusItems }: {
+  activityApiUrl: string;
+  statusItems: HomeStatusItem[];
+}) {
   const [activity, setActivity] = useState<Activity>(fallbackActivity);
 
   useEffect(() => {
@@ -184,23 +199,40 @@ export function HomeNowActivity({ activityApiUrl }: { activityApiUrl: string }) 
   const entries = activity.watching.entries;
 
   return (
-    <>
-      <div>
-        <dt>Reading</dt>
-        <dd>
-          <a
-            href={activity.reading.profileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Reading on StoryGraph (opens in a new tab)"
-          >
-            StoryGraph <span aria-hidden="true">↗</span>
-          </a>
-        </dd>
-      </div>
-      <div className="home-now-watching">
-        <dt>Watching</dt>
-        <dd aria-live="polite">
+    <div className="home-activity-layout">
+      <dl className="home-activity-side">
+        <div>
+          <dt>Reading</dt>
+          <dd>
+            <a
+              href={activity.reading.profileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Reading on StoryGraph (opens in a new tab)"
+            >
+              StoryGraph <span aria-hidden="true">↗</span>
+            </a>
+          </dd>
+        </div>
+        {statusItems.map((item) => (
+          <div key={item.label}>
+            <dt>{item.label}</dt>
+            <dd>{item.url ? (
+              <a href={item.url} target="_blank" rel="noopener noreferrer"
+                aria-label={`${item.label}: ${item.value} (opens in a new tab)`}>
+                {item.value} <span aria-hidden="true">↗</span>
+              </a>
+            ) : item.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <section className="home-now-watching" aria-labelledby="watching-title">
+        <header className="movies-heading">
+          <h2 id="watching-title">Watching</h2>
+          <a href={activity.watching.profileUrl} target="_blank" rel="noopener noreferrer"
+            aria-label="Letterboxd profile (opens in a new tab)">Letterboxd ↗</a>
+        </header>
+        <div aria-live="polite">
           {entries ? (
             <ul className="letterboxd-entries" aria-label="Recent Letterboxd watches">
               {entries.map((entry) => (
@@ -212,25 +244,16 @@ export function HomeNowActivity({ activityApiUrl }: { activityApiUrl: string }) 
                     rel="noopener noreferrer"
                     aria-label={entryLabel(entry)}
                   >
-                    {entry.posterUrl ? (
-                      // Letterboxd supplies the public poster URL in its RSS feed.
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        className="letterboxd-card-poster"
-                        src={entry.posterUrl}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <span className="letterboxd-card-poster letterboxd-card-poster--missing" aria-hidden="true" />
-                    )}
+                    <MoviePoster key={entry.posterUrl ?? "missing"} src={entry.posterUrl} />
                     <span className="letterboxd-card-title">{entry.title}</span>
                     {entry.year || entry.rating !== undefined ? (
                       <span className="letterboxd-card-meta">
                         {entry.year ? entry.year : null}
-                        {entry.year && entry.rating !== undefined ? " · " : null}
-                        {entry.rating !== undefined ? starRating(entry.rating) : null}
+                        {entry.rating !== undefined ? (
+                          <span className="letterboxd-card-rating" aria-hidden="true">
+                            {entry.rating === 0 ? "0 / 5" : starRating(entry.rating)}
+                          </span>
+                        ) : null}
                       </span>
                     ) : null}
                   </a>
@@ -247,8 +270,8 @@ export function HomeNowActivity({ activityApiUrl }: { activityApiUrl: string }) 
               {watchingTitle} <span aria-hidden="true">↗</span>
             </a>
           )}
-        </dd>
-      </div>
-    </>
+        </div>
+      </section>
+    </div>
   );
 }

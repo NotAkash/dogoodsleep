@@ -97,11 +97,15 @@ function parseStatusItems(section: string): HomeStatusItem[] {
       const label = item.slice(0, separator.index).trim();
       const value = item.slice(separator.index + separator[0].length).trim();
 
-      return label && value
+      const namedLink = value.match(/^\[([^\]]+)]\(([^)]+)\)$/);
+      const url = namedLink?.[2].trim() ?? value;
+      const displayValue = namedLink?.[1].trim() ?? value;
+
+      return label && displayValue
         ? [{
             label,
-            value,
-            ...(isExternalUrl(value) ? { url: value } : {}),
+            value: displayValue,
+            ...(isExternalUrl(url) ? { url } : {}),
           }]
         : [];
     });

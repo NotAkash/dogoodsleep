@@ -1,17 +1,12 @@
 ---
 right_now_label: "Right now"
-updated: "Updated August 23, 2026"
-headline: "What I'm Thinking About:"
 links_label: "Elsewhere"
-links_heading: "Worth a detour."
-links_intro: "Articles and posts from elsewhere on the internet."
 links_empty: "Nothing pinned right now."
 ---
 
 ## Current
 
-- Thinking About — Getting a tattoo
-- Building — https://transit-tracker.dogoodsleep.com/
+- Building — [Transit tracker](https://transit-tracker.dogoodsleep.com/)
 
 ## Elsewhere On The Internet
 

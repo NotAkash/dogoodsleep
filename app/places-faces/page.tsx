@@ -9,7 +9,7 @@ export default function PlacesFacesPage() {
   return (
     <main
       id="main-content"
-      className="archive-main min-h-[calc(100vh-65px)] w-full px-5 pb-0 pt-10 sm:px-10 sm:pt-16 lg:px-12 lg:pt-20"
+      className="archive-main page-wrap"
     >
       <PlacesFacesGallery imageApiUrl={imageApiUrl} />
     </main>
