@@ -41,3 +41,7 @@ worker/.dev.vars
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# browser verification
+/test-results/
+/playwright-report/
