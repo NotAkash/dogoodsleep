@@ -20,11 +20,11 @@ export function MainNav() {
             >
                 <Link
                     href="/"
-                    aria-label="Do Good Sleep, home"
+                    aria-label="DoGoodSleep, home"
                     aria-current={pathname === "/" ? "page" : undefined}
                     className="site-brand"
                 >
-                    Home
+                    DoGoodSleep
                 </Link>
 
                 <div className="site-nav-links">

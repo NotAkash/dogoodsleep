@@ -117,12 +117,9 @@ export function HomeArchivePreview({
     );
   }
 
-  const { hasPaginationMeta, total } = state.preview;
-
   if (frames.length === 0) {
     return (
       <div className="preview-state preview-state-message">
-        <p className="eyebrow">Archive sampler</p>
         <p className="preview-state-title">No frames in this set yet.</p>
         <Link className="text-link" href="/journal">
           Read the drafts
@@ -137,15 +134,6 @@ export function HomeArchivePreview({
       className="archive-preview"
       aria-label="View Places & Faces"
     >
-      <div className="archive-preview-heading">
-        <span>Archive sampler</span>
-        <span>
-          {hasPaginationMeta
-            ? `${total} frames`
-            : `${frames.length} frames`}
-        </span>
-      </div>
-
       <div
         className={`preview-grid${
           hasPortraitSupportingFrame ? " preview-grid-portrait-support" : ""
@@ -157,8 +145,7 @@ export function HomeArchivePreview({
             className={`preview-frame${
               portraitImageIds.has(image.id) ? " preview-frame-portrait" : ""
             }`}
-
-          >
+>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={image.src}
@@ -167,20 +154,9 @@ export function HomeArchivePreview({
                 recordImageOrientation(image.id, event.currentTarget);
               }}
             />
-            <figcaption>
-              <span>
-                {hasPaginationMeta ? "Frame" : "Image"}{" "}
-                {String(frameNumber).padStart(hasPaginationMeta ? 3 : 2, "0")}
-              </span>
-              <span>{frameNumber === total ? "Latest" : "Places & Faces"}</span>
-            </figcaption>
           </figure>
         ))}
       </div>
-
-      <span className="archive-preview-link">
-        View Places &amp; Faces <span aria-hidden="true">↗</span>
-      </span>
     </Link>
   );
 }

@@ -17,11 +17,8 @@ export default function HomePage() {
         <main id="main-content" className="home-page">
             <section className="home-hero">
                 <div className="home-intro">
-                    <p className="eyebrow">Akash · Toronto · Places & Faces</p>
-                    <h1>Do Good Sleep</h1>
-                    <p className="home-deck">
-                        You feel good, and then you fall asleep.
-                    </p>
+                    <p className="eyebrow">Akash Singh -- Toronto, ON</p>
+                    <h1>Pictures, notes, and things in progress.</h1>
                     <div className="home-actions">
                         <Link className="primary-link" href="/places-faces">
                             View Places &amp; Faces

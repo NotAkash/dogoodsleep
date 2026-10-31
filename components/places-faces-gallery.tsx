@@ -878,9 +878,6 @@ export function PlacesFacesGallery({
                         ? `${images.length} photographs · ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)}`
                         : `${images.length} photographs`}
                     </p>
-                    <p className="hidden sm:block">
-                      Select a photograph to inspect
-                    </p>
                   </div>
 
                   <div
