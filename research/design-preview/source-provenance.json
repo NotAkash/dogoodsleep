@@ -1,0 +1,81 @@
+{
+  "archiveEndpoint": "https://api.dogoodsleep.com/images?page=1&limit=8&dimensions=1",
+  "activityEndpoint": "https://api.dogoodsleep.com/activity?version=2",
+  "snapshotDate": "2026-10-30",
+  "photos": [
+    {
+      "id": "2026/HFX26/Admiral_Lake/IMG_8681.jpg",
+      "src": "https://images.dogoodsleep.com/2026/HFX26/Admiral_Lake/IMG_8681.jpg",
+      "alt": "IMG 8681",
+      "width": 2048,
+      "height": 1365,
+      "local": "assets/photo-0.jpg"
+    },
+    {
+      "id": "2026/HFX26/Admiral_Lake/IMG_8679.jpg",
+      "src": "https://images.dogoodsleep.com/2026/HFX26/Admiral_Lake/IMG_8679.jpg",
+      "alt": "IMG 8679",
+      "width": 2048,
+      "height": 1365,
+      "local": "assets/photo-1.jpg"
+    },
+    {
+      "id": "2026/HFX26/Admiral_Lake/IMG_8666.jpg",
+      "src": "https://images.dogoodsleep.com/2026/HFX26/Admiral_Lake/IMG_8666.jpg",
+      "alt": "IMG 8666",
+      "width": 2048,
+      "height": 1365,
+      "local": "assets/photo-2.jpg"
+    },
+    {
+      "id": "2026/HFX26/Admiral_Lake/IMG_8665.jpg",
+      "src": "https://images.dogoodsleep.com/2026/HFX26/Admiral_Lake/IMG_8665.jpg",
+      "alt": "IMG 8665",
+      "width": 2048,
+      "height": 1365,
+      "local": "assets/photo-3.jpg"
+    },
+    {
+      "id": "2026/HFX26/Admiral_Lake/IMG_8665-HDR.jpg",
+      "src": "https://images.dogoodsleep.com/2026/HFX26/Admiral_Lake/IMG_8665-HDR.jpg",
+      "alt": "IMG 8665 HDR",
+      "width": 2048,
+      "height": 1365,
+      "local": "assets/photo-4.jpg"
+    },
+    {
+      "id": "2026/HFX26/Admiral_Lake/IMG_8663.jpg",
+      "src": "https://images.dogoodsleep.com/2026/HFX26/Admiral_Lake/IMG_8663.jpg",
+      "alt": "IMG 8663",
+      "width": 2048,
+      "height": 1365,
+      "local": "assets/photo-5.jpg"
+    }
+  ],
+  "movies": [
+    {
+      "title": "Digger",
+      "url": "https://letterboxd.com/dogoodsleep/film/digger-2026/",
+      "year": "2026",
+      "rating": 4.5,
+      "posterUrl": "https://a.ltrbxd.com/resized/film-poster/1/1/3/2/6/8/8/1132688-digger-2026-0-600-0-900-crop.jpg?v=81ec883a95",
+      "local": "assets/movie-0.jpg"
+    },
+    {
+      "title": "Obsession",
+      "url": "https://letterboxd.com/dogoodsleep/film/obsession-2025/",
+      "year": "2025",
+      "rating": 5,
+      "posterUrl": "https://a.ltrbxd.com/resized/film-poster/1/2/3/4/4/7/2/1234472-obsession-2025-2-0-600-0-900-crop.jpg?v=cff6fc00b6",
+      "local": "assets/movie-1.jpg"
+    },
+    {
+      "title": "Let It Be",
+      "url": "https://letterboxd.com/dogoodsleep/film/let-it-be/",
+      "year": "1970",
+      "rating": 4,
+      "posterUrl": "https://a.ltrbxd.com/resized/film-poster/3/8/9/3/3/38933-let-it-be-0-600-0-900-crop.jpg?v=9c5f63b68a",
+      "local": "assets/movie-2.jpg"
+    }
+  ]
+}

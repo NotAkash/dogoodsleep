@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -30,8 +31,13 @@ export default function RootLayout({
         <link rel="preconnect" href="https://images.dogoodsleep.com" />
       </head>
       <body className={inter.variable}>
+        <a className="skip-link" href="#main-content">Skip to content</a>
         <MainNav />
         {children}
+        <footer className="site-footer">
+          <span>Do Good Sleep · Akash</span>
+          <Link href="/resume">About this site</Link>
+        </footer>
       </body>
     </html>
   );

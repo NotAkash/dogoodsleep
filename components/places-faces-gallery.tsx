@@ -645,25 +645,25 @@ export function PlacesFacesGallery({
   };
 
   return (
-    <section className="archive-sheet mx-auto w-full max-w-[1680px]" aria-labelledby="archive-title">
+    <section className="archive-sheet" aria-labelledby="archive-title">
       <div
         className="archive-surface"
         aria-hidden={activeImage ? true : undefined}
         inert={activeImage ? true : undefined}
       >
-        <header className="archive-folio mb-14 sm:mb-20 lg:mb-24">
-          <div className="grid gap-8 sm:gap-10">
+        <header className="archive-folio">
+          <div className="archive-masthead">
             <div>
               <h1
                 id="archive-title"
-                className="archive-title text-5xl leading-[0.84] text-[var(--ink)] sm:text-7xl lg:text-[8.5rem]"
+                className="archive-title page-title"
               >
                 Places &amp; Faces
               </h1>
             </div>
 
             <dl
-              className="archive-folio-meta grid w-fit grid-cols-1 text-left text-[9px] uppercase tracking-[0.2em] text-[var(--muted)] sm:text-[10px]"
+              className="archive-folio-meta"
               aria-live="polite"
             >
               <div>
@@ -768,13 +768,13 @@ export function PlacesFacesGallery({
           >
             <span className="sr-only">Loading the first Places &amp; Faces photographs.</span>
             <div
-              className="columns-2 gap-2.5 sm:columns-3 sm:gap-10 lg:gap-12"
+              className="archive-grid"
               aria-hidden="true"
             >
               {loadingFrames.map((frame) => (
                 <div
                   key={`archive-loading-frame-${frame}`}
-                  className="mb-2.5 aspect-[3/2] break-inside-avoid bg-[var(--surface)] motion-safe:animate-pulse sm:mb-10 lg:mb-12 motion-reduce:animate-none"
+                  className="archive-placeholder aspect-[3/2] break-inside-avoid bg-[var(--surface)] motion-safe:animate-pulse motion-reduce:animate-none"
                 />
               ))}
             </div>
@@ -878,13 +878,10 @@ export function PlacesFacesGallery({
                         ? `${images.length} photographs · ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)}`
                         : `${images.length} photographs`}
                     </p>
-                    <p className="hidden sm:block">
-                      Select a photograph to inspect
-                    </p>
                   </div>
 
                   <div
-                    className="archive-grid columns-2 gap-2.5 sm:columns-3 sm:gap-10 lg:gap-12"
+                    className="archive-grid"
                     aria-label={`Places & Faces photographs in ${displayedFolderName}`}
                   >
                     {images.map((image, index) => {
@@ -898,7 +895,7 @@ export function PlacesFacesGallery({
                             galleryTriggerRef.current = event.currentTarget;
                             setActiveIndex(index);
                           }}
-                          className="archive-frame group mb-2.5 block w-full break-inside-avoid text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--ink)] sm:mb-10 lg:mb-12"
+                          className="archive-frame"
                           aria-label={`${image.alt}. Open ${frameLabel.toLowerCase()}.`}
                         >
                           <span
@@ -924,7 +921,7 @@ export function PlacesFacesGallery({
                     })}
                   </div>
 
-                  <footer className="archive-pagination -mx-5 mt-16 flex flex-col gap-7 px-5 py-8 sm:-mx-10 sm:mt-24 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-10 lg:-mx-12 lg:px-12">
+                  <footer className="archive-pagination">
               <p className="text-[10px] uppercase tracking-[0.22em] text-[color:rgba(237,240,235,0.5)]">
                 {hasPaginationMeta
                   ? `Photographs ${formatFrameNumber(visibleFrameLow)}–${formatFrameNumber(visibleFrameHigh)} of ${total}`

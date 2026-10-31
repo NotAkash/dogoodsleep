@@ -55,3 +55,29 @@ test("rejects non-web link protocols", () => {
 
   assert.deepEqual(home.externalLinks, []);
 });
+
+test("named status links retain editable labels alongside raw URLs and plain text", () => {
+  const home = parseHomeContent(`## Current
+- Building — [Transit tracker](https://transit-tracker.dogoodsleep.com/)
+- Reading — A book
+- Using — https://example.org/
+`);
+  assert.deepEqual(home.statusItems, [
+    { label: "Building", value: "Transit tracker", url: "https://transit-tracker.dogoodsleep.com/" },
+    { label: "Reading", value: "A book" },
+    { label: "Using", value: "https://example.org/", url: "https://example.org/" },
+  ]);
+});
+
+test("named status links never turn unsafe protocols into clickable URLs", () => {
+  const home = parseHomeContent(`## Current
+- Local — [File](file:///tmp/private.txt)
+- Script — [Run](javascript:alert)
+- Inline — [Data](data:text/html,hello)
+`);
+  assert.deepEqual(home.statusItems, [
+    { label: "Local", value: "File" },
+    { label: "Script", value: "Run" },
+    { label: "Inline", value: "Data" },
+  ]);
+});
